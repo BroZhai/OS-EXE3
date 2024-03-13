@@ -210,10 +210,23 @@ void SortCard(Card* HandStack,int playerIndex){
 
 int main(int argc, char *argv[]){
 
+    int i;
   //Known that a stack of 52 cards will be input in the command line
   Card Stack[52];
   //Store all the input cards.
-  int i;
+  char input[200];
+  char* inputPtr;
+  fgets(input,200,stdin);
+  inputPtr=strtok(input," ");
+  while (inputPtr!=NULL)
+  {
+    Stack[i].suit=inputPtr[0];
+    Stack[i].val=inputPtr[1];
+    i++;
+    inputPtr=strtok(NULL," ");
+  }
+  
+
   for(i=0;i<argc-1;i++){
     Stack[i].suit=argv[i+1][0];
     Stack[i].val=argv[i+1][1];

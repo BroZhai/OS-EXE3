@@ -24,13 +24,8 @@ int main(){
     inputPtr=strtok(input," ");
     int i;
     while(inputPtr!=NULL){
-      for(i=0;i<strlen(inputPtr);i+=2){
-        char card[3];
-        strncpy(card,&inputPtr[i],2*sizeof(char));
-        card[2]='\0';
-        printf("第一个值:%c 第二个值:%c\n",card[0],card[1]);
-      }
-      inputPtr=strtok(NULL," ");
+        printf("第一个值:%c 第二个值:%c\n",inputPtr[0],inputPtr[1]);
+      inputPtr=strtok(NULL," ");// 传入"NULL"，表示从上一次的位置继续分割字符串，并返回下一个分割出的子字符串的起始位置
     }
     
 
