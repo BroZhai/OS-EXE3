@@ -22,7 +22,7 @@ void Distribute(Card* Stack, Card* HandStack,int playerIndex){
 
 //A funtion that print the cards on the player's hand.
 void ShowCard(Card* HandStack,int playerIndex){
-  printf("Child %d, pid %d: ",playerIndex+1,getpid());
+  printf("Child %d, pid %d: received ",playerIndex+1,getpid());
   int i;
   for(i=0;i<13;i++){ //assume that each player got 13 cards (52 cards in stack)
     printf("%c%c ",HandStack[i].suit,HandStack[i].val);
@@ -32,16 +32,13 @@ void ShowCard(Card* HandStack,int playerIndex){
 
 //Another print function to show all the card being devied into different groups
 void LimitShow(Card* SelectStack,int playerIndex,int size){
-  printf("<");
   if(size==0){
-    printf("> ");
     return;
   }
   int i;
   for(i=0;i<size;i++){
     printf("%c%c ",SelectStack[i].suit,SelectStack[i].val);
   }
-  printf("> ");
 }
 
 //get the calculated point in the SortCard() and print them out according to the format
@@ -91,7 +88,7 @@ void DescendSort(Card* SelectStack,int size){
 
 //A function that sort the cards in player's hand and calculate the value for the hand
 void SortCard(Card* HandStack,int playerIndex){
-  printf("Child %d, pid %d: ",playerIndex+1,getpid());
+  printf("Child %d, pid %d: arranged ",playerIndex+1,getpid());
 
   //Create 4 arrays to store different suit of cards
   Card Sstack[13];
@@ -125,6 +122,7 @@ void SortCard(Card* HandStack,int playerIndex){
   }
 
   //Showing player's hand
+
   LimitShow(Sstack,playerIndex,Scount);
   LimitShow(Hstack,playerIndex,Hcount);
   LimitShow(Cstack,playerIndex,Ccount);
@@ -204,19 +202,19 @@ void SortCard(Card* HandStack,int playerIndex){
     
 
   //Print the Score
-  ShowPoints(playerIndex,Valpoints,adjPoints);
+  // ShowPoints(playerIndex,Valpoints,adjPoints);
   printf("\n");
 }
 
 int main(int argc, char *argv[]){
 
-    int i;
+  int i;
   //Known that a stack of 52 cards will be input in the command line
   Card Stack[52];
   //Store all the input cards.
   char input[200];
   char* inputPtr;
-  fgets(input,200,stdin);
+  fgets(input,200,stdin); //process the input .txt file
   inputPtr=strtok(input," ");
   while (inputPtr!=NULL)
   {
