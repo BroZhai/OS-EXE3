@@ -14,6 +14,22 @@ typedef struct
 
 int sCounter;
 
+
+void play_round(int player_id, int read_fd, int write_fd) {
+    char cards[256];
+    read(read_fd, cards, sizeof(cards));
+
+    // 处理牌面信息
+    // ...
+
+    // 出牌
+    char played_card[256];
+    // 根据规则决定出牌
+
+    // 发送出牌信息给父进程
+    write(write_fd, played_card, strlen(played_card) + 1);
+}
+
 //Developed a function that deal the Cards from the Card Stack
 void Distribute(Card* Stack, Card* HandStack,int playerIndex){
   int i;
@@ -135,14 +151,12 @@ void SortCard(Card* HandStack,int playerIndex){
       Hcount++;
     }
   }
-  //   for(i=0;i<Scount;i++){
-  //     SortedHand[sCounter].suit=Sstack[i].suit;
-  //     SortedHand[sCounter].val=Sstack[i].val;
-  // }
+
   InsertSort(Sstack,SortedHand,Scount);
+  InsertSort(Hstack,SortedHand,Hcount);
   InsertSort(Cstack,SortedHand,Ccount);
   InsertSort(Dstack,SortedHand,Dcount);
-  InsertSort(Hstack,SortedHand,Hcount);
+  //SortedHand[]建立完成！
 
   for(i=0;i<13;i++){
     printf("%c%c ",SortedHand[i].suit,SortedHand[i].val);
@@ -158,76 +172,76 @@ void SortCard(Card* HandStack,int playerIndex){
   int totalcards=13;
 
   //calculate the points of honor cards, and count the numbers for each honor cards
-  for(i=0;i<13;i++){
-    if(HandStack[i].val=='J'){
-      Valpoints+=1;
-    }
-    else if(HandStack[i].val=='Q'){
-      Valpoints+=2;
-    }
-    else if(HandStack[i].val=='K'){
-      Valpoints+=3;
-    }
-    else if(HandStack[i].val=='A'){
-      Valpoints+=4;
-    }
-  }
+  // for(i=0;i<13;i++){
+  //   if(HandStack[i].val=='J'){
+  //     Valpoints+=1;
+  //   }
+  //   else if(HandStack[i].val=='Q'){
+  //     Valpoints+=2;
+  //   }
+  //   else if(HandStack[i].val=='K'){
+  //     Valpoints+=3;
+  //   }
+  //   else if(HandStack[i].val=='A'){
+  //     Valpoints+=4;
+  //   }
+  // }
 
   //calculate the five,six,seven-card suit
-  int Counts[4]={Scount,Hcount,Ccount,Dcount};
-  for(i=0;i<4;i++){
-    if(Counts[i]==5){
-      Suitpoints+=1;
-    }if(Counts[i]==6){
-      Suitpoints+=2;
-    }if(Counts[i]>=7){
-      Suitpoints+=3;
-    }
-  }
+  // int Counts[4]={Scount,Hcount,Ccount,Dcount};
+  // for(i=0;i<4;i++){
+  //   if(Counts[i]==5){
+  //     Suitpoints+=1;
+  //   }if(Counts[i]==6){
+  //     Suitpoints+=2;
+  //   }if(Counts[i]>=7){
+  //     Suitpoints+=3;
+  //   }
+  // }
 
   //calculate the initial adjusted point (would be varied later)
-  int adjPoints=Suitpoints+Valpoints;
+  // int adjPoints=Suitpoints+Valpoints;
 
   //count the number of singleton, doubleton and Zero
-  int Single=0;
-  int Double=0;
-  int Zero=0;
+  // int Single=0;
+  // int Double=0;
+  // int Zero=0;
     
-  for(i=0;i<4;i++){
-    if(Counts[i]==0){
-      Zero++;
-    }
-    if(Counts[i]==1){
-      Single++;
-    }
-    if(Counts[i]==2){
-      Double++;
-    }
-  }
+  // for(i=0;i<4;i++){
+  //   if(Counts[i]==0){
+  //     Zero++;
+  //   }
+  //   if(Counts[i]==1){
+  //     Single++;
+  //   }
+  //   if(Counts[i]==2){
+  //     Double++;
+  //   }
+  // }
 
-  adjPoints+=3*Zero+2*Single+Double;
+  // adjPoints+=3*Zero+2*Single+Double;
 
   //Check whether a suit contains only singleton
-  if (Scount == 1) {
-    if (Sstack[0].val == 'J' || Sstack[0].val == 'Q' || Sstack[0].val == 'K' || Sstack[0].val == 'A') {
-      adjPoints --;
-    }
-  }
-  if (Ccount == 1) {
-    if (Cstack[0].val == 'J' || Cstack[0].val == 'Q' || Cstack[0].val == 'K' || Cstack[0].val == 'A') {
-      adjPoints --;
-    }
-  }
-  if (Dcount == 1) {
-    if (Dstack[0].val == 'J' || Dstack[0].val == 'Q' || Dstack[0].val == 'K' || Dstack[0].val == 'A') {
-      adjPoints --;
-    }
-  }
-  if (Hcount == 1) {
-    if (Hstack[0].val == 'J' || Hstack[0].val == 'Q' || Hstack[0].val == 'K' || Hstack[0].val == 'A') {
-      adjPoints --;
-    }
-  }
+  // if (Scount == 1) {
+  //   if (Sstack[0].val == 'J' || Sstack[0].val == 'Q' || Sstack[0].val == 'K' || Sstack[0].val == 'A') {
+  //     adjPoints --;
+  //   }
+  // }
+  // if (Ccount == 1) {
+  //   if (Cstack[0].val == 'J' || Cstack[0].val == 'Q' || Cstack[0].val == 'K' || Cstack[0].val == 'A') {
+  //     adjPoints --;
+  //   }
+  // }
+  // if (Dcount == 1) {
+  //   if (Dstack[0].val == 'J' || Dstack[0].val == 'Q' || Dstack[0].val == 'K' || Dstack[0].val == 'A') {
+  //     adjPoints --;
+  //   }
+  // }
+  // if (Hcount == 1) {
+  //   if (Hstack[0].val == 'J' || Hstack[0].val == 'Q' || Hstack[0].val == 'K' || Hstack[0].val == 'A') {
+  //     adjPoints --;
+  //   }
+  // }
     
 
   //Print the Score
@@ -254,22 +268,45 @@ int main(int argc, char *argv[]){
   }
   
 
-  for(i=0;i<argc-1;i++){
-    Stack[i].suit=argv[i+1][0];
-    Stack[i].val=argv[i+1][1];
+  // for(i=0;i<argc-1;i++){
+  //   Stack[i].suit=argv[i+1][0];
+  //   Stack[i].val=argv[i+1][1];
+  // }
+  int processID[4];
+  int playerID[4];
+  int playerReadpipes[4];
+  int playerWritepipes[4];
+  int playerScores[4];
+
+  //Create and Initialize Pipes for every player
+  for(i=0;i<4;i++){
+    int pipe_fd[2];
+    if(pipe(pipe_fd)==-1){
+      printf("Pipe creating exception! The program terminates now!");
+      exit(1);
+    }
+    playerReadpipes[i]=pipe_fd[0];
+    playerWritepipes[i]=pipe_fd[1];
   }
+
 
   //Using for-loop to create 4 players(childs)
   for(i=0;i<4;i++){
-    int player=fork();
-    if(player<0){
+    processID[i]=fork();
+    if(processID[i]<0){
       printf("Failed to create the player, the program will terminate now.");
       return 0;
-    }else if(player==0){//What would be done to each player
+    }else if(processID[i]==0){//What would be done to each player
       Card HandStack[13]; //Construct the hand stack for the player
       Distribute(Stack,HandStack,i); //Extract the specific card from the Stack to player's hand
       ShowCard(HandStack,i); //Initially print the player's hand
       SortCard(HandStack,i); //Group and Calculate the player's hand, then sort
+      close(playerReadpipes[i]);
+      close(playerWritepipes[(i+1)%4]);
+      playerID[i]=getpid();
+      // play_round(i+1,playerReadpipes[(i+4-1)%4],playerWritepipes[i]);
+
+
       exit(0); //termination of a child process
     }
   }
