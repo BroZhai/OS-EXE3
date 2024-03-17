@@ -12,6 +12,8 @@ typedef struct
   char val;
 }Card;
 
+int sCounter;
+
 //Developed a function that deal the Cards from the Card Stack
 void Distribute(Card* Stack, Card* HandStack,int playerIndex){
   int i;
@@ -56,6 +58,14 @@ void CardSwap(Card* A,Card* B){
   *B = *temp;
 }
 
+void InsertSort(Card* SelectStack,Card* targetStack,int size){
+  for(int i=0;i<size;i++){
+    targetStack[sCounter].suit=SelectStack[i].suit;
+    targetStack[sCounter].val=SelectStack[i].val;
+    sCounter++;
+  }
+}
+
 /* J=74, Q=81,
    K=75 (+10) -->85, A=65 (+25) -->90, T=84(-20) -->64 [smallest]
    So that T<J<Q<K<A */
@@ -88,6 +98,7 @@ void DescendSort(Card* SelectStack,int size){
 
 //A function that sort the cards in player's hand and calculate the value for the hand
 void SortCard(Card* HandStack,int playerIndex){
+  int i;
   printf("Child %d, pid %d: arranged ",playerIndex+1,getpid());
 
   //Create 4 arrays to store different suit of cards
@@ -95,14 +106,18 @@ void SortCard(Card* HandStack,int playerIndex){
   Card Cstack[13];
   Card Dstack[13];
   Card Hstack[13];
+  Card SortedHand[13];
+  sCounter=0;
+  
 
   int Valpoints=0;
   int Suitpoints=0;
 
   DescendSort(HandStack, 13);
 
+
   int Scount=0,Ccount=0,Dcount=0,Hcount=0;
-  int i;
+  
   for(i=0;i<13;i++){
     if(HandStack[i].suit == 'S'){
       Sstack[Scount]=HandStack[i];
@@ -120,13 +135,27 @@ void SortCard(Card* HandStack,int playerIndex){
       Hcount++;
     }
   }
+  //   for(i=0;i<Scount;i++){
+  //     SortedHand[sCounter].suit=Sstack[i].suit;
+  //     SortedHand[sCounter].val=Sstack[i].val;
+  // }
+  InsertSort(Sstack,SortedHand,Scount);
+  InsertSort(Cstack,SortedHand,Ccount);
+  InsertSort(Dstack,SortedHand,Dcount);
+  InsertSort(Hstack,SortedHand,Hcount);
 
-  //Showing player's hand
+  for(i=0;i<13;i++){
+    printf("%c%c ",SortedHand[i].suit,SortedHand[i].val);
+  }
 
-  LimitShow(Sstack,playerIndex,Scount);
-  LimitShow(Hstack,playerIndex,Hcount);
-  LimitShow(Cstack,playerIndex,Ccount);
-  LimitShow(Dstack,playerIndex,Dcount);
+    //Showing player's hand
+
+  // LimitShow(Sstack,playerIndex,Scount);
+  // LimitShow(Hstack,playerIndex,Hcount);
+  // LimitShow(Cstack,playerIndex,Ccount);
+  // LimitShow(Dstack,playerIndex,Dcount);
+
+  int totalcards=13;
 
   //calculate the points of honor cards, and count the numbers for each honor cards
   for(i=0;i<13;i++){
