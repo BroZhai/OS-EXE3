@@ -162,90 +162,11 @@ void SortCard(Card* HandStack,int playerIndex){
     printf("%c%c ",SortedHand[i].suit,SortedHand[i].val);
   }
 
-    //Showing player's hand
 
-  // LimitShow(Sstack,playerIndex,Scount);
-  // LimitShow(Hstack,playerIndex,Hcount);
-  // LimitShow(Cstack,playerIndex,Ccount);
-  // LimitShow(Dstack,playerIndex,Dcount);
 
   int totalcards=13;
 
-  //calculate the points of honor cards, and count the numbers for each honor cards
-  // for(i=0;i<13;i++){
-  //   if(HandStack[i].val=='J'){
-  //     Valpoints+=1;
-  //   }
-  //   else if(HandStack[i].val=='Q'){
-  //     Valpoints+=2;
-  //   }
-  //   else if(HandStack[i].val=='K'){
-  //     Valpoints+=3;
-  //   }
-  //   else if(HandStack[i].val=='A'){
-  //     Valpoints+=4;
-  //   }
-  // }
 
-  //calculate the five,six,seven-card suit
-  // int Counts[4]={Scount,Hcount,Ccount,Dcount};
-  // for(i=0;i<4;i++){
-  //   if(Counts[i]==5){
-  //     Suitpoints+=1;
-  //   }if(Counts[i]==6){
-  //     Suitpoints+=2;
-  //   }if(Counts[i]>=7){
-  //     Suitpoints+=3;
-  //   }
-  // }
-
-  //calculate the initial adjusted point (would be varied later)
-  // int adjPoints=Suitpoints+Valpoints;
-
-  //count the number of singleton, doubleton and Zero
-  // int Single=0;
-  // int Double=0;
-  // int Zero=0;
-    
-  // for(i=0;i<4;i++){
-  //   if(Counts[i]==0){
-  //     Zero++;
-  //   }
-  //   if(Counts[i]==1){
-  //     Single++;
-  //   }
-  //   if(Counts[i]==2){
-  //     Double++;
-  //   }
-  // }
-
-  // adjPoints+=3*Zero+2*Single+Double;
-
-  //Check whether a suit contains only singleton
-  // if (Scount == 1) {
-  //   if (Sstack[0].val == 'J' || Sstack[0].val == 'Q' || Sstack[0].val == 'K' || Sstack[0].val == 'A') {
-  //     adjPoints --;
-  //   }
-  // }
-  // if (Ccount == 1) {
-  //   if (Cstack[0].val == 'J' || Cstack[0].val == 'Q' || Cstack[0].val == 'K' || Cstack[0].val == 'A') {
-  //     adjPoints --;
-  //   }
-  // }
-  // if (Dcount == 1) {
-  //   if (Dstack[0].val == 'J' || Dstack[0].val == 'Q' || Dstack[0].val == 'K' || Dstack[0].val == 'A') {
-  //     adjPoints --;
-  //   }
-  // }
-  // if (Hcount == 1) {
-  //   if (Hstack[0].val == 'J' || Hstack[0].val == 'Q' || Hstack[0].val == 'K' || Hstack[0].val == 'A') {
-  //     adjPoints --;
-  //   }
-  // }
-    
-
-  //Print the Score
-  // ShowPoints(playerIndex,Valpoints,adjPoints);
   printf("\n");
 }
 
