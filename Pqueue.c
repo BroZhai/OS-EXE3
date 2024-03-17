@@ -15,21 +15,6 @@ typedef struct
 int sCounter;
 
 
-void play_round(int player_id, int read_fd, int write_fd) {
-    char cards[256];
-    read(read_fd, cards, sizeof(cards));
-
-    // 处理牌面信息
-    // ...
-
-    // 出牌
-    char played_card[256];
-    // 根据规则决定出牌
-
-    // 发送出牌信息给父进程
-    write(write_fd, played_card, strlen(played_card) + 1);
-}
-
 //Developed a function that deal the Cards from the Card Stack
 void Distribute(Card* Stack, Card* HandStack,int playerIndex){
   int i;
@@ -59,11 +44,6 @@ void LimitShow(Card* SelectStack,int playerIndex,int size){
   }
 }
 
-//get the calculated point in the SortCard() and print them out according to the format
-void ShowPoints(int playerIndex,int points,int adjPoints){
-  printf("\nChild %d, pid %d: ",playerIndex+1,getpid());
-  printf("%d points, %d adjusted points",points,adjPoints);
-}
 
 
 /*Swap the cards according to their address*/
@@ -125,10 +105,6 @@ void SortCard(Card* HandStack,int playerIndex){
   Card SortedHand[13];
   sCounter=0;
   
-
-  int Valpoints=0;
-  int Suitpoints=0;
-
   DescendSort(HandStack, 13);
 
 
@@ -189,10 +165,6 @@ int main(int argc, char *argv[]){
   }
   
 
-  // for(i=0;i<argc-1;i++){
-  //   Stack[i].suit=argv[i+1][0];
-  //   Stack[i].val=argv[i+1][1];
-  // }
   int processID[4];
   int playerID[4];
   int playerReadpipes[4];
@@ -225,7 +197,6 @@ int main(int argc, char *argv[]){
       close(playerReadpipes[i]);
       close(playerWritepipes[(i+1)%4]);
       playerID[i]=getpid();
-      // play_round(i+1,playerReadpipes[(i+4-1)%4],playerWritepipes[i]);
 
 
       exit(0); //termination of a child process
