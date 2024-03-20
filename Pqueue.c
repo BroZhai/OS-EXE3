@@ -28,7 +28,7 @@ int playerScores[4] = {0};
 CardSet CS[4];
 
 //playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家 边出牌)
-void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[]){
+void playRound(int playerReadpipes[], int playerWritepipes[], CardSet SET[],int playerIndex){
   /*在整理好玩家的手牌SortedHand[]之后，现在我们要实现玩家打牌
   如果是第一轮roundCounter=1，那么先手玩家可以出除红心以外任和的牌，默认是value最小的那张牌
   当第一轮的先手玩家出完牌后，这个牌的对象信息会被传到父进程，父进程首先会print出这个玩家打了什么牌，再这个牌的信息传递给下一个子进程(玩家)，以此类推
@@ -67,7 +67,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
     int sameSuitIndex = -1;
     int randomSuitIndex=-1;
     for (i = 0; i < roundCardCount; i++) {
-      if (RoundCards[i].suit == SortedHand[currentPlayer].suit) {
+      if (RoundCards[i].suit == SET[currentPlayer].CardStack->suit) {
         sameSuitIndex = i;
         break;
       }
@@ -75,8 +75,8 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
     //找不到相同的花色，转而找最小val的card
     if(sameSuitIndex==-1){
       for (i = 0; i < roundCardCount; i++) {
-      int sValue=SortedHand[0].val;
-      if (SortedHand[currentPlayer].val<sValue) {
+      int sValue=SET[0].CardStack->val;
+      if (SET[currentPlayer].CardStack->val<sValue) {
         randomSuitIndex = i;
       }
     }
@@ -88,15 +88,15 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
     if (sameSuitIndex != -1) {
       //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
       //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
-      playedCard = SortedHand[sameSuitIndex];
-      SortedHand[sameSuitIndex].suit = 0;
-      SortedHand[sameSuitIndex].val = 0;
+      playedCard = SET[currentPlayer].CardStack[sameSuitIndex];
+      SET[currentPlayer].CardStack[sameSuitIndex].suit = 0;
+      SET[currentPlayer].CardStack[sameSuitIndex].val = 0;
     } else {
       //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
       //这块的逻辑也要重写[Done?]
-      playedCard = SortedHand[randomSuitIndex];
-      SortedHand[randomSuitIndex].suit = 0;
-      SortedHand[randomSuitIndex].val = 0;
+      playedCard = SET[currentPlayer].CardStack[randomSuitIndex];
+      SET[currentPlayer].CardStack[randomSuitIndex].suit = 0;
+      SET[currentPlayer].CardStack[randomSuitIndex].val = 0;
     }
 
     //将每个玩家在当轮打出的卡playedCard记录到总回合数RoundCards[]中，同时roundCardCount++
@@ -117,7 +117,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
 
   // }
 
-  // 计算每回合的得分[统计"一个区间"内的RoundCards[]，看有多少红心和黑桃Q，每个红心+1，黑桃Q+13
+  // 计算每回合的得分统计"一个区间"内的RoundCards[]，看有多少红心和黑桃Q，每个红心+1，黑桃Q+13
   //对应到roundWinner的玩家上，对玩家分数数组playerScores[]的roundWinner(index)进行更改
   int roundScore = 0;
   for (i = roundCardCount-4; i < roundCardCount; i++) {
@@ -230,7 +230,7 @@ void DescendSort(Card* SelectStack,int size){
 }
 
 //A function that sort the cards in player's hand and calculate the value for the hand
-void SortCard(Card* HandStack,int playerIndex, int playerReadpipes[], int playerWritepipes[]){
+void SortCard(Card* HandStack,int playerIndex){
   int i;
   printf("Child %d, pid %d: arranged ",playerIndex+1,getpid());
 
@@ -329,18 +329,18 @@ int main(int argc, char *argv[]){
       // memcpy(CS[i].stackPtr, SortedCard, 13 * sizeof(Card));
       Distribute(Stack,HandStack,i); //Extract the specific card from the Stack to player's hand
       ShowCard(HandStack,i); //Initially print the player's hand
-      SortCard(HandStack,i,playerReadpipes,playerWritepipes); //Group and Calculate the player's hand, then sort
+      // SortCard(HandStack,i,playerReadpipes,playerWritepipes); //Group and Calculate the player's hand, then sort
+      SortCard(HandStack,i);
       close(playerReadpipes[i]); //close the read pipe
       close(playerWritepipes[(i+1)%4]); //close the write pipe
       playerID[i]=getpid();
-      // CS[i].stackPtr=SortedCard;
 
       exit(0); //termination of a child process
-    // }else{
-    //   playRound(playerReadpipes, playerWritepipes, SortedCard);
-    // }
+    }else{
+      // playRound(playerReadpipes, playerWritepipes, SortedCard); //有大问题
+    }
   }
-  }
+  
   int k;
 
 
@@ -351,5 +351,5 @@ int main(int argc, char *argv[]){
   // 
       wait(NULL);
   }
-}
 
+}
