@@ -43,18 +43,15 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
   //回合开始这块逻辑也有问题
   int roundWinner;
   int startingPlayer; //= roundCounter == 1 ? 0 : roundWinner;
-  if(roundCounter==1){
-    roundWinner = 0;
-  }
-  if(roundCounter==0){
-      startingPlayer=1; //玩家"指代数"尚不清楚
-  }else{
-      startingPlayer=roundWinner;
+  if(roundCounter==1){ //rounderCounter从"1"开始计数
+      roundWinner=0;
     }
+  startingPlayer=roundWinner;
+  currentPlayer=startingPlayer;
 
   // 使用for循环去实现：每轮四个玩家轮流出牌
-  for (currentPlayer = startingPlayer; currentPlayer < 4; currentPlayer++) {
-    // Check if the current player has any cards left
+  for (currentPlayer; currentPlayer < 4; currentPlayer++) {
+    // Check if the current player has any cards left(可选)
     if (SortedHand[currentPlayer].suit == 0 && SortedHand[currentPlayer].val == 0) {
       continue; // 判断玩家是否还有牌"剩余"，需要重写
     }
