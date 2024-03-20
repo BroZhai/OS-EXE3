@@ -26,9 +26,12 @@ int playerReadpipes[4];
 int playerWritepipes[4];
 int playerScores[4] = {0}; // 用int[]记录和初始化每个玩家的初始分数
 CardSet CS[4];
+Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
+int roundCardCount = 0; //总出卡counter
+int currentPlayer;
 
 //playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家 边出牌)
-void playRound(int playerReadpipes[], int playerWritepipes[], CardSet SET[],int playerIndex){
+void playRound(int playerReadpipes[], int playerWritepipes[]){
   /*在整理好玩家的手牌SortedHand[]之后，现在我们要实现玩家打牌
   如果是第一轮roundCounter=1，那么先手玩家可以出除红心以外任和的牌，默认是value最小的那张牌
   当第一轮的先手玩家出完牌后，这个牌的对象信息会被传到父进程，父进程首先会print出这个玩家打了什么牌，再这个牌的信息传递给下一个子进程(玩家)，以此类推
@@ -38,10 +41,10 @@ void playRound(int playerReadpipes[], int playerWritepipes[], CardSet SET[],int 
   用一个Card数组来记录这一局打出的所有牌对象，然后根据这个数组来判断谁是RoundWinner，如果这个Card中有红心牌，那么对于这个RoundWinner来说，每个红心牌+1分，还有每个黑桃Q+13分。下一轮会以RoundWinner为先手玩家
   开始下一轮游戏，此时roundCounter!=1，对于之后的进程来说可以算是进入了一个循环，直到所有玩家的手牌都打完，游戏结束*/
   // Array to record the cards played in each round
-  Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
-  int roundCardCount = 0; //总出卡counter
+  // Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
+  // int roundCardCount = 0; //总出卡counter
   int i; //定义内部循环变量
-  int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
+  // int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
 
   
   // Determine the starting player for each round
@@ -51,67 +54,74 @@ void playRound(int playerReadpipes[], int playerWritepipes[], CardSet SET[],int 
   if(roundCounter==1){ //rounderCounter从"1"开始计数
       roundWinner=0;
     }
-  startingPlayer=roundWinner;
+  startingPlayer=playerIDSet[roundWinner];
   currentPlayer=startingPlayer;
 
-  // 使用for循环去实现：每轮四个玩家轮流出牌(Bug) //这块应该是在父进程里面的
-  for (currentPlayer; currentPlayer < 4; i++) {
-    // // Check if the current player has any cards left(可选)
-    // if (SortedHand[(currentPlayer)%4].suit == 0 && SortedHand[currentPlayer].val == 0) {
-    //   continue; // 判断玩家是否还有牌"剩余"，需要重写
-    // }
-
-    // 查找当前玩家是否有"能出"的牌(花色一样的牌)，并进行定位
-    int sameSuitIndex = -1;
-    int randomSuitIndex=-1;
-    for (i = 0; i < roundCardCount; i++) {
-      if (RoundCards[i].suit == SET[currentPlayer].CardStack->suit) {
-        sameSuitIndex = i;
-        break;
-      }
-    }
-    //找不到相同的花色，转而找最小val的card
-    if(sameSuitIndex==-1){
-      for (i = 0; i < roundCardCount; i++) {
-      int sValue=SET[0].CardStack->val;
-      if (SET[currentPlayer].CardStack->val<sValue) {
-        randomSuitIndex = i;
-      }
-    }
+  // 创建一个玩家将要打出的Card对象 和 下一个玩家会读这个playedCard
+  Card playedCard;
+  // Card readCard;
+  int sameSuitIndex = -1;
+  int randomSuitIndex=-1;
+  if(roundCounter==1){
+    playedCard = CS[currentPlayer].CardStack[0];
+    CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
+    CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
+    write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
+    roundCounter++;
+    return;
   }
-     
 
-    // 创建一个玩家将要打出的Card对象
-    Card playedCard;
-    if (sameSuitIndex != -1) {
-      //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
-      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
-      playedCard = SET[currentPlayer].CardStack[sameSuitIndex];
-      SET[currentPlayer].CardStack[sameSuitIndex].suit = 0;
-      SET[currentPlayer].CardStack[sameSuitIndex].val = 0;
-    } else {
-      //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
-      //这块的逻辑也要重写[Done?]
-      playedCard = SET[currentPlayer].CardStack[randomSuitIndex];
-      SET[currentPlayer].CardStack[randomSuitIndex].suit = 0;
-      SET[currentPlayer].CardStack[randomSuitIndex].val = 0;
-    }
-
-    //将每个玩家在当轮打出的卡playedCard记录到总回合数RoundCards[]中，同时roundCardCount++
-    RoundCards[roundCardCount] = playedCard; 
-    roundCardCount++;
-
-    //打印出当前玩家的出牌信息
+    //打印出当前玩家的出牌信息(getpid()要改，要提前存好每个child的pid)
     printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
 
     // 将玩家打出的卡传回到 父进程中 [传入playedCard的地址]
     write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
-  }
 
   //找roundWinner的算法没有被具体实现(没看懂，自己重写)
   // for(i = roundCardCount-4; i < roundCardCount; i++){
   //   int mValue=0;
   //   if(RoundCards[i].suit==)
+
+  // 查找当前玩家是否有"能出"的牌(花色一样的牌)，并进行定位
+    Card* readCard;
+
+    //write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
+    read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
+    write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
+    for (i = 0; i < roundCardCount; i++) {
+      if (RoundCards[i].suit == CS[currentPlayer].CardStack->suit) {
+        sameSuitIndex = i;
+        break;
+      }
+    }
+
+    //找不到相同的花色，转而找最小val的card
+    if(sameSuitIndex==-1){
+    for (i = 0; i < roundCardCount; i++) {
+    int sValue=CS[0].CardStack->val;
+    if (CS[currentPlayer].CardStack->val<sValue) {
+        randomSuitIndex = i;
+        }
+      }
+    }
+    if (sameSuitIndex != -1) {
+      //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
+      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
+      playedCard = CS[currentPlayer].CardStack[sameSuitIndex];
+      CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
+      CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
+    } else {
+      //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
+      //这块的逻辑也要重写[Done?]
+      playedCard = CS[currentPlayer].CardStack[randomSuitIndex];
+      CS[currentPlayer].CardStack[randomSuitIndex].suit = 0;
+      CS[currentPlayer].CardStack[randomSuitIndex].val = 0;
+    }
+
+    //将每个玩家在当轮打出的卡playedCard记录到总回合数RoundCards[]中，同时roundCardCount++
+    RoundCards[roundCardCount] = playedCard; 
+    roundCardCount++;
+    
 
   // }
 
@@ -134,7 +144,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[], CardSet SET[],int 
   printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
   printf("Round Score: %d\n", roundScore);
 
-  //更新roundCounter，??? [逻辑出现不一，roundCounter到底是13还是52?]
+  //更新roundCounter，上限为13
   roundCounter++;
 
   //根据roundCounter数检查游戏是否结束，这里的条件为游戏结束
@@ -145,8 +155,8 @@ void playRound(int playerReadpipes[], int playerWritepipes[], CardSet SET[],int 
       printf("Child %d, pid %d: %d\n", i + 1, playerIDSet[i], playerScores[i]);
     }
   }
-}
 
+}
 /*以下的部分为之前的依托构式((*/
 
 //Developed a function that deal the Cards from the Card Stack
@@ -178,8 +188,6 @@ void LimitShow(Card* SelectStack,int playerIndex,int size){
   }
 }
 
-
-
 /*Swap the cards according to their address*/
 void CardSwap(Card* A,Card* B){
   Card* temp = malloc(sizeof(Card));
@@ -196,10 +204,6 @@ void InsertSort(Card* SelectStack,Card* targetStack,int size){
     sCounter++;
   }
 }
-
-/* J=74, Q=81,
-   K=75 (+10) -->85, A=65 (+25) -->90, T=84(-20) -->64 [smallest]
-   So that T<J<Q<K<A */
 
 void DescendSort(Card* SelectStack,int size){
   int i,j;
@@ -230,7 +234,7 @@ void DescendSort(Card* SelectStack,int size){
 //A function that sort the cards in player's hand and calculate the value for the hand
 void SortCard(Card* HandStack,int playerIndex){
   int i;
-  printf("Child %d, pid %d: arranged ",playerIndex+1,getpid());
+  printf("Child %d, pid %d: arranged ",playerIndex+1,getpid()); //getpid()才是取得进程号
 
   //Create 4 arrays to store different suit of cards
   Card Sstack[13];
@@ -334,12 +338,19 @@ int main(int argc, char *argv[]){
       close(playerReadpipes[i]); //close the read pipe
       close(playerWritepipes[(i+1)%4]); //close the write pipe
       playerIDSet[i]=i+1;
+      processID[i]=getpid();
 
       exit(0); //termination of a child process
-    }else{
-      // playRound(playerReadpipes, playerWritepipes,CS,"PlayerID"); //有大问题
     }
-  }
+        playRound(playerReadpipes, playerWritepipes); //有大问题
+      
+      
+      // 使用for循环去实现：每轮四个玩家轮流出牌(Bug) //这块应该是在父进程里面的
+  // for (i=0; i<4; i++) {
+    // // Check if the current player has any cards left(可选)
+    // if (SortedHand[(currentPlayer)%4].suit == 0 && SortedHand[currentPlayer].val == 0) {
+    //   continue; // 判断玩家是否还有牌"剩余"，需要重写
+    // }
   
   int k;
 
@@ -347,9 +358,9 @@ int main(int argc, char *argv[]){
   //receive exit status from the 4 players (parent)
   for(i=0;i<4;i++){
   // for(i=0;i<13;i++){
-     
   // 
       wait(NULL);
   }
 
+}
 }
