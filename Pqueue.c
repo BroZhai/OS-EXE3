@@ -12,15 +12,22 @@ typedef struct
   char val;
 }Card;
 
+typedef struct 
+{
+  Card CardStack[13];
+}CardSet;
+
+
 int sCounter;
 int roundCounter=1;
 int processID[4];
 int playerID[4];
 int playerReadpipes[4];
 int playerWritepipes[4];
-int playerScores[4];
+int playerScores[4] = {0};
+CardSet CS[4];
 
-//playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家边出牌)
+//playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家 边出牌)
 void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[]){
   /*在整理好玩家的手牌SortedHand[]之后，现在我们要实现玩家打牌
   如果是第一轮roundCounter=1，那么先手玩家可以出除红心以外任和的牌，默认是value最小的那张牌
@@ -34,13 +41,13 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
   Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
   int roundCardCount = 0; //总出卡counter
   int i;
-  int currentPlayer;
+  int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
 
   // 用int[]记录和初始化每个玩家的初始分数
-  int playerScores[4] = {0};
+  
 
   // Determine the starting player for each round
-  //回合开始这块逻辑也有问题
+  //回合开始这块逻辑也有问题(修了，吗?)
   int roundWinner;
   int startingPlayer; //= roundCounter == 1 ? 0 : roundWinner;
   if(roundCounter==1){ //rounderCounter从"1"开始计数
@@ -49,39 +56,50 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
   startingPlayer=roundWinner;
   currentPlayer=startingPlayer;
 
-  // 使用for循环去实现：每轮四个玩家轮流出牌
-  for (currentPlayer; currentPlayer < 4; currentPlayer++) {
-    // Check if the current player has any cards left(可选)
-    if (SortedHand[currentPlayer].suit == 0 && SortedHand[currentPlayer].val == 0) {
-      continue; // 判断玩家是否还有牌"剩余"，需要重写
-    }
+  // 使用for循环去实现：每轮四个玩家轮流出牌(Bug) //这块应该是在父进程里面的
+  for (currentPlayer; currentPlayer < 4; i++) {
+    // // Check if the current player has any cards left(可选)
+    // if (SortedHand[(currentPlayer)%4].suit == 0 && SortedHand[currentPlayer].val == 0) {
+    //   continue; // 判断玩家是否还有牌"剩余"，需要重写
+    // }
 
     // 查找当前玩家是否有"能出"的牌(花色一样的牌)，并进行定位
     int sameSuitIndex = -1;
+    int randomSuitIndex=-1;
     for (i = 0; i < roundCardCount; i++) {
       if (RoundCards[i].suit == SortedHand[currentPlayer].suit) {
         sameSuitIndex = i;
         break;
       }
     }
+    //找不到相同的花色，转而找最小val的card
+    if(sameSuitIndex==-1){
+      for (i = 0; i < roundCardCount; i++) {
+      int sValue=SortedHand[0].val;
+      if (SortedHand[currentPlayer].val<sValue) {
+        randomSuitIndex = i;
+      }
+    }
+  }
+     
 
     // 创建一个玩家将要打出的Card对象
     Card playedCard;
     if (sameSuitIndex != -1) {
       //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
-      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)
-      playedCard = SortedHand[currentPlayer];
-      SortedHand[currentPlayer].suit = 0;
-      SortedHand[currentPlayer].val = 0;
+      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
+      playedCard = SortedHand[sameSuitIndex];
+      SortedHand[sameSuitIndex].suit = 0;
+      SortedHand[sameSuitIndex].val = 0;
     } else {
       //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
-      //这块的逻辑也要重写
-      playedCard = SortedHand[currentPlayer];
-      SortedHand[currentPlayer].suit = 0;
-      SortedHand[currentPlayer].val = 0;
+      //这块的逻辑也要重写[Done?]
+      playedCard = SortedHand[randomSuitIndex];
+      SortedHand[randomSuitIndex].suit = 0;
+      SortedHand[randomSuitIndex].val = 0;
     }
 
-    //将每个玩家在当轮打出的卡记录到总回合数RoundCards[]中，同时roundCardCount++
+    //将每个玩家在当轮打出的卡playedCard记录到总回合数RoundCards[]中，同时roundCardCount++
     RoundCards[roundCardCount] = playedCard; 
     roundCardCount++;
 
@@ -92,10 +110,17 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
     write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
   }
 
+  //找roundWinner的算法没有被具体实现(没看懂，自己重写)
+  // for(i = roundCardCount-4; i < roundCardCount; i++){
+  //   int mValue=0;
+  //   if(RoundCards[i].suit==)
+
+  // }
+
   // 计算每回合的得分[统计"一个区间"内的RoundCards[]，看有多少红心和黑桃Q，每个红心+1，黑桃Q+13
   //对应到roundWinner的玩家上，对玩家分数数组playerScores[]的roundWinner(index)进行更改
   int roundScore = 0;
-  for (i = 0; i < roundCardCount; i++) {
+  for (i = roundCardCount-4; i < roundCardCount; i++) {
     if (RoundCards[i].suit == 'H') {
       roundScore += 1;
     } else if (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q') {
@@ -246,13 +271,20 @@ void SortCard(Card* HandStack,int playerIndex, int playerReadpipes[], int player
   InsertSort(Dstack,SortedHand,Dcount);
   //SortedHand[]建立完成！
 
+  // for(i=0;i<13;i++){
+  //   printf("%c%c ",SortedHand[i].suit,SortedHand[i].val);
+  // }
+  //CS[i].stackPtr=SortedHand;
+  
   for(i=0;i<13;i++){
-    printf("%c%c ",SortedHand[i].suit,SortedHand[i].val);
+    CS[i].CardStack->suit=SortedHand[i].suit;
+    CS[i].CardStack->val=SortedHand[i].val;
+  }
+  for(i=0;i<13;i++){
+  printf("%c%c ",CS[i].CardStack->suit,CS[i].CardStack->val);
   }
   printf("\n");
   
-
-
 }
 
 int main(int argc, char *argv[]){
@@ -272,9 +304,6 @@ int main(int argc, char *argv[]){
     i++;
     inputPtr=strtok(NULL," ");
   }
-  
-
-
 
   //Create and Initialize Pipes for every player
   for(i=0;i<4;i++){
@@ -296,20 +325,31 @@ int main(int argc, char *argv[]){
       return 0;
     }else if(processID[i]==0){  //What would be done to each player
       Card HandStack[13]; //Construct the hand stack for the player
+      Card* SortedCard;
+      // memcpy(CS[i].stackPtr, SortedCard, 13 * sizeof(Card));
       Distribute(Stack,HandStack,i); //Extract the specific card from the Stack to player's hand
       ShowCard(HandStack,i); //Initially print the player's hand
       SortCard(HandStack,i,playerReadpipes,playerWritepipes); //Group and Calculate the player's hand, then sort
       close(playerReadpipes[i]); //close the read pipe
       close(playerWritepipes[(i+1)%4]); //close the write pipe
       playerID[i]=getpid();
-      playRound(playerReadpipes, playerWritepipes, HandStack);
+      // CS[i].stackPtr=SortedCard;
 
       exit(0); //termination of a child process
-    }
+    // }else{
+    //   playRound(playerReadpipes, playerWritepipes, SortedCard);
+    // }
   }
+  }
+  int k;
+
 
   //receive exit status from the 4 players (parent)
   for(i=0;i<4;i++){
-    wait(NULL);
+  // for(i=0;i<13;i++){
+     
+  // 
+      wait(NULL);
   }
 }
+
