@@ -20,6 +20,7 @@ int playerReadpipes[4];
 int playerWritepipes[4];
 int playerScores[4];
 
+//playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家边出牌)
 void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[]){
   /*在整理好玩家的手牌SortedHand[]之后，现在我们要实现玩家打牌
   如果是第一轮roundCounter=1，那么先手玩家可以出除红心以外任和的牌，默认是value最小的那张牌
@@ -39,14 +40,15 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
   int playerScores[4] = {0};
 
   // Determine the starting player for each round
+  //回合开始这块逻辑也有问题
   int roundWinner;
+  int startingPlayer; //= roundCounter == 1 ? 0 : roundWinner;
   if(roundCounter==1){
     roundWinner = 0;
   }
-    int startingPlayer; //= roundCounter == 1 ? 0 : roundWinner;
-    if(roundCounter==0){
+  if(roundCounter==0){
       startingPlayer=1; //玩家"指代数"尚不清楚
-    }else{
+  }else{
       startingPlayer=roundWinner;
     }
 
@@ -93,7 +95,8 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
     write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
   }
 
-  // Determine the round winner based on the RoundCards array
+  // 计算每回合的得分[统计"一个区间"内的RoundCards[]，看有多少红心和黑桃Q，每个红心+1，黑桃Q+13
+  //对应到roundWinner的玩家上，对玩家分数数组playerScores[]的roundWinner(index)进行更改
   int roundScore = 0;
   for (i = 0; i < roundCardCount; i++) {
     if (RoundCards[i].suit == 'H') {
@@ -105,20 +108,18 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
       roundWinner = (startingPlayer + i) % 4;
     }
   }
+  playerScores[roundWinner] += roundScore; //实现具体某个玩家的分数更改
 
-  // Update the scores of the players
-  playerScores[roundWinner] += roundScore;
-
-  // Print the round winner and their score
+  //打印"回合胜利"玩家的信息
   printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerID[roundWinner]);
   printf("Round Score: %d\n", roundScore);
 
-  // Update the round counter
+  //更新roundCounter，??? [逻辑出现不一，roundCounter到底是13还是52?]
   roundCounter++;
 
-  // Check if the game is over
+  //根据roundCounter数检查游戏是否结束，这里的条件为游戏结束
   if (roundCounter > 13) {
-    // Print the final scores of the players
+    //如果游戏结束，打印回合结束的信息(同时要想办法终止游戏)
     printf("Final Scores:\n");
     for (i = 0; i < 4; i++) {
       printf("Child %d, pid %d: %d\n", i + 1, playerID[i], playerScores[i]);
@@ -126,6 +127,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[], Card SortedHand[])
   }
 }
 
+/*以下的部分为之前的依托构式((*/
 
 //Developed a function that deal the Cards from the Card Stack
 void Distribute(Card* Stack, Card* HandStack,int playerIndex){
@@ -314,4 +316,3 @@ int main(int argc, char *argv[]){
     wait(NULL);
   }
 }
-
