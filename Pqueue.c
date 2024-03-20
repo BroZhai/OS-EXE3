@@ -41,10 +41,10 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   用一个Card数组来记录这一局打出的所有牌对象，然后根据这个数组来判断谁是RoundWinner，如果这个Card中有红心牌，那么对于这个RoundWinner来说，每个红心牌+1分，还有每个黑桃Q+13分。下一轮会以RoundWinner为先手玩家
   开始下一轮游戏，此时roundCounter!=1，对于之后的进程来说可以算是进入了一个循环，直到所有玩家的手牌都打完，游戏结束*/
   // Array to record the cards played in each round
-  Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
-  int roundCardCount = 0; //总出卡counter
+  // Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
+  // int roundCardCount = 0; //总出卡counter
   int i; //定义内部循环变量
-  int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
+  // int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
 
   
   // Determine the starting player for each round
@@ -61,16 +61,18 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   Card playedCard;
   // Card readCard;
   int sameSuitIndex = -1;
-  int randomSuitIndex=-1;
+  int randomSuitIndex= -1;
   if(roundCounter==1){
-    playedCard = CS[currentPlayer].CardStack[0];
+    playedCard.suit = CS[currentPlayer].CardStack[0].suit;//打出当前玩家的第一张牌
+    playedCard.val=CS[currentPlayer].CardStack[0].val;
+    printf("Child %d, pid %d: play %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
     CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
     CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
     write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
     roundCounter++;
+   
     return;
-  }
-
+  }else{
     //打印出当前玩家的出牌信息(getpid()要改，要提前存好每个child的pid)
     printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
 
@@ -118,6 +120,8 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
       CS[currentPlayer].CardStack[randomSuitIndex].val = 0;
     }
 
+    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
+
     //将每个玩家在当轮打出的卡playedCard记录到总回合数RoundCards[]中，同时roundCardCount++
     RoundCards[roundCardCount] = playedCard; 
     roundCardCount++;
@@ -155,6 +159,10 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
       printf("Child %d, pid %d: %d\n", i + 1, playerIDSet[i], playerScores[i]);
     }
   }
+
+  }
+
+    
 
 }
 /*以下的部分为之前的依托构式((*/
@@ -338,6 +346,7 @@ int main(int argc, char *argv[]){
       close(playerReadpipes[i]); //close the read pipe
       close(playerWritepipes[(i+1)%4]); //close the write pipe
       playerIDSet[i]=i+1;
+      playRound(playerReadpipes,playerWritepipes);
 
       exit(0); //termination of a child process
     }else{
@@ -346,6 +355,10 @@ int main(int argc, char *argv[]){
   }
   
   int k;
+  // while(roundCounter<13){
+  //   playRound(playerReadpipes,playerWritepipes);
+  // }
+  
 
 
   //receive exit status from the 4 players (parent)
