@@ -21,10 +21,10 @@ typedef struct
 int sCounter;
 int roundCounter=1;
 int processID[4];
-int playerIDSet[4];
+int playerID[4];
 int playerReadpipes[4];
 int playerWritepipes[4];
-int playerScores[4] = {0}; // 用int[]记录和初始化每个玩家的初始分数
+int playerScores[4] = {0};
 CardSet CS[4];
 Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
 int roundCardCount = 0; //总出卡counter
@@ -41,12 +41,14 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   用一个Card数组来记录这一局打出的所有牌对象，然后根据这个数组来判断谁是RoundWinner，如果这个Card中有红心牌，那么对于这个RoundWinner来说，每个红心牌+1分，还有每个黑桃Q+13分。下一轮会以RoundWinner为先手玩家
   开始下一轮游戏，此时roundCounter!=1，对于之后的进程来说可以算是进入了一个循环，直到所有玩家的手牌都打完，游戏结束*/
   // Array to record the cards played in each round
-  // Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
-  // int roundCardCount = 0; //总出卡counter
-  int i; //定义内部循环变量
-  // int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
+  Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
+  int roundCardCount = 0; //总出卡counter
+  int i;
+  int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
 
+  // 用int[]记录和初始化每个玩家的初始分数
   
+
   // Determine the starting player for each round
   //回合开始这块逻辑也有问题(修了，吗?)
   int roundWinner;
@@ -141,7 +143,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   playerScores[roundWinner] += roundScore; //实现具体某个玩家的分数更改
 
   //打印"回合胜利"玩家的信息
-  printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
+  printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerID[roundWinner]);
   printf("Round Score: %d\n", roundScore);
 
   //更新roundCounter，上限为13
@@ -152,7 +154,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
     //如果游戏结束，打印回合结束的信息(同时要想办法终止游戏)
     printf("Final Scores:\n");
     for (i = 0; i < 4; i++) {
-      printf("Child %d, pid %d: %d\n", i + 1, playerIDSet[i], playerScores[i]);
+      printf("Child %d, pid %d: %d\n", i + 1, playerID[i], playerScores[i]);
     }
   }
 
@@ -320,8 +322,6 @@ int main(int argc, char *argv[]){
 
 
   //Using for-loop to create 4 players(childs)
-  //注意"i"才为playerIndex，从0开始
-
   for(i=0;i<4;i++){
     processID[i]=fork();
     if(processID[i]<0){
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]){
       return 0;
     }else if(processID[i]==0){  //What would be done to each player
       Card HandStack[13]; //Construct the hand stack for the player
-      // Card* SortedCard;
+      Card* SortedCard;
       // memcpy(CS[i].stackPtr, SortedCard, 13 * sizeof(Card));
       Distribute(Stack,HandStack,i); //Extract the specific card from the Stack to player's hand
       ShowCard(HandStack,i); //Initially print the player's hand
@@ -337,20 +337,13 @@ int main(int argc, char *argv[]){
       SortCard(HandStack,i);
       close(playerReadpipes[i]); //close the read pipe
       close(playerWritepipes[(i+1)%4]); //close the write pipe
-      playerIDSet[i]=i+1;
-      processID[i]=getpid();
+      playerID[i]=getpid();
 
       exit(0); //termination of a child process
+    }else{
+      // playRound(playerReadpipes, playerWritepipes, SortedCard); //有大问题
     }
-        playRound(playerReadpipes, playerWritepipes); //有大问题
-      
-      
-      // 使用for循环去实现：每轮四个玩家轮流出牌(Bug) //这块应该是在父进程里面的
-  // for (i=0; i<4; i++) {
-    // // Check if the current player has any cards left(可选)
-    // if (SortedHand[(currentPlayer)%4].suit == 0 && SortedHand[currentPlayer].val == 0) {
-    //   continue; // 判断玩家是否还有牌"剩余"，需要重写
-    // }
+  }
   
   int k;
 
