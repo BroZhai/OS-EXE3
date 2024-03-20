@@ -1,0 +1,11 @@
+Child 2 pid 12347: received DQ CJ SK ST C4 C3 H9 H4 HK D6 D9 CA S9 
+Child 2 pid 12347: arranged SK ST S9| HK H9 H4 | CA CJ C4 C3| DQ D9 D6 
+
+Child 1 pid 12346: received DK H3 HA HQ HJ H8 D8 S5 C5 S6 C9 S3 CK 
+Child 1 pid 12346: arranged S6 S5 S3| HA HQ HJ H8 H3| CK C9 C5| DK D8 
+
+Child 3 pid 12348: received S4 C2 S2 H7 C8 CQ D5 D2 H6 SA DA D4 DT 
+Child 3 pid 12348: arranged SA S4 S2| H7 H6| CQ C8 C2| DA DT D5 D4 D2 
+
+Child 4 pid 12349: received S8 D3 CT HT D7 C6 DJ S7 H2 SQ H5 C7 SJ 
+Child 4 pid 12349: arranged SQ SJ S8 S7| HT H5 H2| CT C7 C6| DJ D7 D3 
