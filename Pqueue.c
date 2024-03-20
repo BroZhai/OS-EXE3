@@ -351,6 +351,9 @@ int main(int argc, char *argv[]){
       exit(0); //termination of a child process
     }else{
       // playRound(playerReadpipes, playerWritepipes,CS,"PlayerID"); //有大问题
+      // Card readCard;
+      // read(playerReadpipes[(currentPlayer+1)%4],&readCard,sizeof(Card));
+      // printf("Player plays: %c%c ",readCard.suit,readCard.val);
     }
   }
   
