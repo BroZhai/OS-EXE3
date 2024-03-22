@@ -22,7 +22,7 @@ typedef struct
 int sCounter;
 int roundCounter=1;
 int processID[4];
-int playerIDSet[4];
+int playerIDSet[4]={1,2,3,4};
 int playerReadpipes[4];
 int playerWritepipes[4];
 int playerScores[4] = {0}; // 用int[]记录和初始化每个玩家的初始分数
@@ -31,6 +31,7 @@ Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)�
 int roundCardCount = 0; //总出卡counter
 int currentPlayer;
 int playerReady[4]={0};
+int gamePid;
 
 
 //Give up on achieveing level 2 and so forth...
@@ -38,6 +39,15 @@ int playerReady[4]={0};
 
 //playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家 边出牌)
 void playRound(int playerReadpipes[], int playerWritepipes[]){
+    int i; //定义内部循环变量
+      for(i=0;i<4;i++){
+        if(playerReady[i]==0){
+          //因为所有玩家未准备就绪，所以如果有玩家此时想出牌将会被拒绝(exit(1))
+          printf("Player %d cannot discard now, since other players are not ready\n",playerIDSet[i]);
+          return;
+        }
+      }
+
   /*在整理好玩家的手牌SortedHand[]之后，现在我们要实现玩家打牌
   如果是第一轮roundCounter=1，那么先手玩家可以出除红心以外任和的牌，默认是value最小的那张牌
   当第一轮的先手玩家出完牌后，这个牌的对象信息会被传到父进程，父进程首先会print出这个玩家打了什么牌，再这个牌的信息传递给下一个子进程(玩家)，以此类推
@@ -49,7 +59,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   // Array to record the cards played in each round
   // Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
   // int roundCardCount = 0; //总出卡counter
-  int i; //定义内部循环变量
+
   // int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
 
   
@@ -60,7 +70,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   if(roundCounter==1){ //rounderCounter从"1"开始计数
       roundWinner=0;
     }
-  startingPlayer=playerIDSet[roundWinner];
+  startingPlayer=roundWinner;
   currentPlayer=startingPlayer;
 
   // 创建一个玩家将要打出的Card对象 和 下一个玩家会读这个playedCard
@@ -69,19 +79,24 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   int sameSuitIndex = -1;
   int randomSuitIndex= -1;
   if(roundCounter==1){ //是第一轮，指定Player 1 作为先手出牌 (手动过一遍流程?)
+    gamePid=getpid();
+    printf("All players are ready, the game is about to start now!\n");
+    printf("Parent pid %d: child players are %d, %d, %d, %d\n",gamePid,processID[0],processID[1],processID[2],processID[3]);
     playedCard.suit = CS[currentPlayer].CardStack[0].suit;//打出当前玩家的第一张牌
     playedCard.val=CS[currentPlayer].CardStack[0].val;
-    printf("Child %d, pid %d: play %c%c\n", playerIDSet[currentPlayer%4],processID[currentPlayer], playedCard.suit, playedCard.val);
-    CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
-    CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
-    write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
+    printf("Parent pid %d: Round %d ,Child 1 to the lead\n",gamePid,roundCounter);
+    printf("Child %d, pid %d: play %c%c\n", playerIDSet[currentPlayer%4],processID[currentPlayer+1], playedCard.suit, playedCard.val);
+    CS[currentPlayer].CardStack[0].suit = 0;
+    CS[currentPlayer].CardStack[0].val = 0;
+    // write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
     RoundCards[0].suit=playedCard.suit;
     RoundCards[0].val=playedCard.val;
     roundCardCount++;
+    currentPlayer++;
     for(i=1;i<=3;i++){
       int k;
-      for(k=0;k<13;k++){
-        if (RoundCards[0].suit == CS[k].CardStack->suit) {
+      for(k=0;k<13;k++){//下一玩家招牌
+        if (RoundCards[0].suit == CS[currentPlayer].CardStack[k].suit) {
         sameSuitIndex = i;
         break;
         } 
@@ -199,7 +214,6 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
 
   }
 
-    
 
 }
 /*以下的部分为之前的依托构式((*/
@@ -336,8 +350,8 @@ void SortCard(Card* HandStack,int playerIndex){
 
 int main(int argc, char *argv[]){
 
-  // printf("This program has failed to achieve level 2 and so forth, please check the source code for referencing...\n");
-  // printf("I've tried my best effort, I'm sorry T-T\n");
+  printf("This program has failed to achieve level 2 and so forth, please check the source code for referencing...\n");
+  printf("I've tried my best effort, I'm sorry T-T\n");
 
   int i;
   //Known that a stack of 52 cards will be input in the command line
@@ -376,36 +390,31 @@ int main(int argc, char *argv[]){
       printf("Failed to create the player, the program will terminate now.");
       return 0;
     }else if(processID[i]==0){  //What would be done to each player
-      for(i=0;i<4;i++){
-        if(playerReady[i]==0){
-          //因为所有玩家未准备就绪，所以如果有玩家此时想出牌将会被拒绝(exit(1))
-          printf("Player %d cannot discard now, since other players are not ready\n",playerIDSet[i]);
-          break;
-        }
-      }
+  //     printf("Player[]: [%d,%d %d,%d]\n",playerIDSet[0],playerIDSet[1],playerIDSet[2],playerIDSet[3]);
+  // printf("ProcessID[]: [%d,%d %d,%d]\n",processID[0],processID[1],processID[2],processID[3]);
       // Card readCard;
       // read(playerReadpipes[(currentPlayer+1)%4],&readCard,sizeof(Card));
 
       // close(playerReadpipes[i]); //close the read pipe
       // close(playerWritepipes[(i+1)%4]); //close the write pipe
       // // playRound(playerReadpipes, playerWritepipes,CS,"PlayerID"); //有大问题
-      // playRound(playerReadpipes,playerWritepipes);
-      // printf("Player plays: %c%c ",readCard.suit,readCard.val);
-     
+          // playRound(playerReadpipes,playerWritepipes);
 
+
+      // printf("Player plays: %c%c ",readCard.suit,readCard.val);
+    
       exit(0); //termination of a child process
     }else{
       if(roundCounter==1){
+        
       Card HandStack[13]; //Construct the hand stack for the player
       // Card* SortedCard;
-      // memcpy(CS[i].stackPtr, SortedCard, 13 * sizeof(Card));
       Distribute(Stack,HandStack,i); //Extract the specific card from the Stack to player's hand
       ShowCard(HandStack,i); //Initially print the player's hand
       // SortCard(HandStack,i,playerReadpipes,playerWritepipes); //Group and Calculate the player's hand, then sort
       SortCard(HandStack,i);
-      playerIDSet[i]=i+1;
       playerReady[i]=1; //Player Ready
-      // playRound(playerReadpipes,playerWritepipes);
+      playRound(playerReadpipes,playerWritepipes);
       }
       
       // Card readCard;
@@ -413,8 +422,7 @@ int main(int argc, char *argv[]){
       
     }
   }
-  // printf("Player[]: [%d,%d %d,%d]\n",playerIDSet[0],playerIDSet[1],playerIDSet[2],playerIDSet[3]);
-  // printf("ProcessID[]: [%d,%d %d,%d]\n",processID[0],processID[1],processID[2],processID[3]);
+
   
   int k;
   // while(roundCounter<13){
