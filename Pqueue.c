@@ -1,3 +1,5 @@
+/*Give up on achieveing level 2 and so forth...
+  I've really tried...*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -5,19 +7,17 @@
 #include <unistd.h>
 #include <string.h> 
 
-
-//Custom a Card Object using typedef, containing the suit and the value attributes of the card
+//Customized a Card Object using typedef, containing the suit and the value attributes of the card
 typedef struct
 {
   char suit;
   char val;
 }Card;
-
+//Created a Card set that holds the Card object 
 typedef struct 
 {
   Card CardStack[13];
 }CardSet;
-
 
 int sCounter;
 int roundCounter=1;
@@ -25,125 +25,121 @@ int processID[4];
 int playerIDSet[4]={1,2,3,4};
 int playerReadpipes[4];
 int playerWritepipes[4];
-int playerScores[4] = {0}; // 用int[]记录和初始化每个玩家的初始分数
-CardSet CS[4];
-Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
-int roundCardCount = 0; //总出卡counter
+int playerScores[4] = {0}; // use a int[] to store every player's score
+CardSet CS[4]; // Create A set a four player's hand
+Card RoundCards[52];   // Array to record the cards played in each round
+int roundCardCount = 0; 
 int currentPlayer;
-int playerReady[4]={0};
+int playerReady[4]={0};//Status for each player
 int gamePid;
 
-
-//Give up on achieveing level 2 and so forth...
-
-
-//playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家 边出牌)
+//Define a function that play the round process
 void playRound(int playerReadpipes[], int playerWritepipes[]){
-    int i; //定义内部循环变量
+    int i; 
       for(i=0;i<4;i++){
         if(playerReady[i]==0){
-          //因为所有玩家未准备就绪，所以如果有玩家此时想出牌将会被拒绝(exit(1))
+          //When players are not all ready, the game will not start 
           printf("Player %d cannot discard now, since other players are not ready\n",playerIDSet[i]);
           return;
         }
       }
 
-  /*在整理好玩家的手牌SortedHand[]之后，现在我们要实现玩家打牌
-  如果是第一轮roundCounter=1，那么先手玩家可以出除红心以外任和的牌，默认是value最小的那张牌
-  当第一轮的先手玩家出完牌后，这个牌的对象信息会被传到父进程，父进程首先会print出这个玩家打了什么牌，再这个牌的信息传递给下一个子进程(玩家)，以此类推
-  当玩家打出这张牌后，对应的，这个玩家自己的手牌数组SortedHand[]中的这张牌会被删除(suit和value都置为0)
-  此时下一轮的玩家需要打出与上一轮相同花色但value最小的牌，如果没有相同花色的牌，那么可以打任意一张牌，对于剩下的玩家也是
-  同样的规则，直到所有玩家打完牌，这一轮的牌局结束，然后父进程会根据这一轮的牌局情况来决定下一轮的先手玩家
-  用一个Card数组来记录这一局打出的所有牌对象，然后根据这个数组来判断谁是RoundWinner，如果这个Card中有红心牌，那么对于这个RoundWinner来说，每个红心牌+1分，还有每个黑桃Q+13分。下一轮会以RoundWinner为先手玩家
-  开始下一轮游戏，此时roundCounter!=1，对于之后的进程来说可以算是进入了一个循环，直到所有玩家的手牌都打完，游戏结束*/
-  // Array to record the cards played in each round
-  // Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
-  // int roundCardCount = 0; //总出卡counter
 
-  // int currentPlayer; //注意，currentPlayer计数从0开始！(0代表玩家1)
-
-  
   // Determine the starting player for each round
-  //回合开始这块逻辑也有问题(修了，吗?)
   int roundWinner;
-  int startingPlayer; //= roundCounter == 1 ? 0 : roundWinner;
-  if(roundCounter==1){ //rounderCounter从"1"开始计数
+  int startingPlayer; 
+  if(roundCounter==1){ //rounderCounter starts from "1"
       roundWinner=0;
     }
   startingPlayer=roundWinner;
   currentPlayer=startingPlayer;
 
-  // 创建一个玩家将要打出的Card对象 和 下一个玩家会读这个playedCard
+  // create a Card object that receives player's discards
   Card playedCard;
-  // Card readCard;
-  int sameSuitIndex = -1;
-  int randomSuitIndex= -1;
-  if(roundCounter==1){ //是第一轮，指定Player 1 作为先手出牌 (手动过一遍流程?)
+  if(roundCounter==1){ //If it is the first round, assign player 1 to be the starter
     gamePid=getpid();
     printf("All players are ready, the game is about to start now!\n");
     printf("Parent pid %d: child players are %d, %d, %d, %d\n",gamePid,processID[0],processID[1],processID[2],processID[3]);
-    playedCard.suit = CS[currentPlayer].CardStack[0].suit;//打出当前玩家的第一张牌
+    playedCard.suit = CS[currentPlayer].CardStack[0].suit;
     playedCard.val=CS[currentPlayer].CardStack[0].val;
     printf("Parent pid %d: Round %d ,Child 1 to the lead\n",gamePid,roundCounter);
     printf("Child %d, pid %d: play %c%c\n", playerIDSet[currentPlayer%4],processID[currentPlayer+1], playedCard.suit, playedCard.val);
     CS[currentPlayer].CardStack[0].suit = 0;
     CS[currentPlayer].CardStack[0].val = 0;
-    // write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
+    // write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card)); //failed to write back
     RoundCards[0].suit=playedCard.suit;
     RoundCards[0].val=playedCard.val;
     roundCardCount++;
     currentPlayer++;
+    //swtich to the next player, locate which card to discard
+    int sameSuitIndex = -1;
+    int randomSuitIndex= -1;
     for(i=1;i<=3;i++){
       int k;
-      for(k=0;k<13;k++){//下一玩家招牌
+      for(k=0;k<13;k++){
+        // find the card with same suit
         if (RoundCards[0].suit == CS[currentPlayer].CardStack[k].suit) {
         sameSuitIndex = i;
         break;
         } 
       }   
-    if (sameSuitIndex != -1) {
-      //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
-      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
-      playedCard.suit = CS[i].CardStack[sameSuitIndex].suit;
-      playedCard.val=CS[i].CardStack[sameSuitIndex].val;
-      CS[i].CardStack[sameSuitIndex].suit = 0;
-      CS[i].CardStack[sameSuitIndex].val = 0;
-    } else {
-      //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
-      //这块的逻辑也要重写[Done?]
-      playedCard.suit = CS[i].CardStack[randomSuitIndex].suit;
-      playedCard.val= CS[i].CardStack[randomSuitIndex].suit;
+      if (sameSuitIndex != -1) {
+        //If the card of same suit is found, discard it.
+        playedCard.suit = CS[i].CardStack[sameSuitIndex].suit;
+        playedCard.val=CS[i].CardStack[sameSuitIndex].val;
+        CS[i].CardStack[sameSuitIndex].suit = 0;
+        CS[i].CardStack[sameSuitIndex].val = 0;
+      } else {
+        //If there are no card with same suit, locate the card with minimum value
+       for (k = 0; i < 13; i++) {
+          int sValue=CS[0].CardStack->val;
+          if (CS[currentPlayer].CardStack->val<sValue) {
+          randomSuitIndex = k;
+        }
+      }
+      //discard the card with the minimum value.
+      playedCard.suit=CS[i].CardStack[randomSuitIndex].suit;
+      playedCard.val=CS[i].CardStack[randomSuitIndex].suit;
       CS[i].CardStack[randomSuitIndex].suit = 0;
       CS[i].CardStack[randomSuitIndex].val = 0;
     }
+    //Store the dicarded card into the RoundCards array [related to score calculation]
     RoundCards[roundCardCount].suit=playedCard.suit;
     RoundCards[roundCardCount].val=playedCard.val;
     printf("Child %d, pid %d: played %c%c\n", playerIDSet[i],processID[currentPlayer], playedCard.suit, playedCard.val);
     currentPlayer++;
     roundCardCount++;
-   
   }
+  //calculate the round score added to the round winner
+  int roundScore = 0;
+  for (i = roundCardCount-4; i < roundCardCount; i++) {
+    if (RoundCards[i].suit == 'H') {
+      roundScore += 1;
+    } else if (RoundCards[i].suit == 'S' &&RoundCards[i].val=='Q') {
+      roundScore += 13;
+    }
+    if (RoundCards[i].suit == 'H'||(RoundCards[i].suit =='S'&& RoundCards[i].val =='Q')) {
+      roundWinner = (startingPlayer + i) % 4;
+    }
+  }
+  playerScores[roundWinner] += roundScore; //add the score to round winner
+
+  //print the round winner message
+  printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
+  printf("Round Score: %d\n", roundScore);
   roundCounter++;
   }else{
-    //不是第一轮，
-    //打印出当前玩家的出牌信息(getpid()要改，要提前存好每个child的pid，存到数组进行调用)
-    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1,processID[currentPlayer], playedCard.suit, playedCard.val);
-
-    // 将玩家打出的卡传回到 父进程中 [传入playedCard的地址]
-    write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
-
-  //找roundWinner的算法没有被具体实现(没看懂，自己重写)
-  // for(i = roundCardCount-4; i < roundCardCount; i++){
-  //   int mValue=0;
-  //   if(RoundCards[i].suit==)
-
-  // 查找当前玩家是否有"能出"的牌(花色一样的牌)，并进行定位
+    //not the first round(roundCounter!=1), print the round information
+    printf("Parent pid %d: Round %d ,Child %d to the lead\n",gamePid,roundCounter,roundWinner);
     Card* readCard;
-    //write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
+    int sameSuitIndex = -1;
+    int randomSuitIndex= -1;
 
-    //Not work as intended, idk what am i doing right here...
-    read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
-    write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
+    /*failed to read from parent and write back*/ 
+    // read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
+    // write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
+
+    // Same, locate the card with same suit or minimum value card
     for (i = 0; i < roundCardCount; i++) {
       if (RoundCards[i].suit == CS[currentPlayer].CardStack->suit) {
         sameSuitIndex = i;
@@ -151,7 +147,6 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
       }
     }
 
-    //找不到相同的花色，转而找最小val的card
     if(sameSuitIndex==-1){
     for (i = 0; i < roundCardCount; i++) {
     int sValue=CS[0].CardStack->val;
@@ -160,65 +155,36 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
         }
       }
     }
-    // if (sameSuitIndex != -1) {
-    //   //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
-    //   //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
-    //   playedCard = CS[currentPlayer].CardStack[sameSuitIndex];
-    //   CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
-    //   CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
-    // } else {
-    //   //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
-    //   //这块的逻辑也要重写[Done?]
-    //   playedCard = CS[currentPlayer].CardStack[randomSuitIndex];
-    //   CS[currentPlayer].CardStack[randomSuitIndex].suit = 0;
-    //   CS[currentPlayer].CardStack[randomSuitIndex].val = 0;
-    // }
+    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, processID[currentPlayer], playedCard.suit, playedCard.val);
 
-    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
-
-    //将每个玩家在当轮打出的卡playedCard记录到总回合数RoundCards[]中，同时roundCardCount++
-    RoundCards[roundCardCount] = playedCard; 
+    //Store the dicarded card into the RoundCards array [related to score calculation]
+    RoundCards[roundCardCount].suit=playedCard.suit;
+    RoundCards[roundCardCount].val=playedCard.val;
     roundCardCount++;
     
 
-  // }
-
-  // 计算每回合的得分统计"一个区间"内的RoundCards[]，看有多少红心和黑桃Q，每个红心+1，黑桃Q+13
-  //对应到roundWinner的玩家上，对玩家分数数组playerScores[]的roundWinner(index)进行更改
-  int roundScore = 0;
-  for (i = roundCardCount-4; i < roundCardCount; i++) {
-    if (RoundCards[i].suit == 'H') {
-      roundScore += 1;
-    } else if (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q') {
-      roundScore += 13;
+    //Same round score calculation strategy
+    int roundScore = 0;
+    for (i = roundCardCount-4; i < roundCardCount; i++) {
+      if (RoundCards[i].suit == 'H') {
+        roundScore += 1;
+      } else if (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q') {
+        roundScore += 13;
+      }
+      if (RoundCards[i].suit == 'H' || (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q')) {
+        roundWinner = (startingPlayer + i) % 4;
+      }
     }
-    if (RoundCards[i].suit == 'H' || (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q')) {
-      roundWinner = (startingPlayer + i) % 4;
-    }
-  }
-  playerScores[roundWinner] += roundScore; //实现具体某个玩家的分数更改
+    playerScores[roundWinner] += roundScore; 
 
-  //打印"回合胜利"玩家的信息
-  printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
-  printf("Round Score: %d\n", roundScore);
+    //print the round winner message
+    printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
+    printf("Round Score: %d\n", roundScore);
 
-  //更新roundCounter，上限为13
   roundCounter++;
-
-  //根据roundCounter数检查游戏是否结束，这里的条件为游戏结束
-  if (roundCounter > 13) {
-    //如果游戏结束，打印回合结束的信息(同时要想办法终止游戏)
-    printf("Final Scores:\n");
-    for (i = 0; i < 4; i++) {
-      printf("Child %d, pid %d: %d\n", i + 1, playerIDSet[i], playerScores[i]);
-    }
   }
-
-  }
-
-
 }
-/*以下的部分为之前的依托构式((*/
+
 
 //Developed a function that deal the Cards from the Card Stack
 void Distribute(Card* Stack, Card* HandStack,int playerIndex){
@@ -332,13 +298,7 @@ void SortCard(Card* HandStack,int playerIndex){
   InsertSort(Hstack,SortedHand,Hcount);
   InsertSort(Cstack,SortedHand,Ccount);
   InsertSort(Dstack,SortedHand,Dcount);
-  //SortedHand[]建立完成！
 
-  // for(i=0;i<13;i++){
-  //   printf("%c%c ",SortedHand[i].suit,SortedHand[i].val);
-  // }
-  //CS[i].stackPtr=SortedHand;
-  
   for(i=0;i<13;i++){
     CS[i].CardStack->suit=SortedHand[i].suit;
     CS[i].CardStack->val=SortedHand[i].val;
@@ -384,59 +344,43 @@ int main(int argc, char *argv[]){
 
 
   //Using for-loop to create 4 players(childs)
-  //注意"i"才为playerIndex，从0开始
-
   for(i=0;i<4;i++){
     processID[i]=fork();
     if(processID[i]<0){
       printf("Failed to create the player, the program will terminate now.");
       return 0;
-    }else if(processID[i]==0){  //What would be done to each player
-  //     printf("Player[]: [%d,%d %d,%d]\n",playerIDSet[0],playerIDSet[1],playerIDSet[2],playerIDSet[3]);
-  // printf("ProcessID[]: [%d,%d %d,%d]\n",processID[0],processID[1],processID[2],processID[3]);
-      // Card readCard;
-      // read(playerReadpipes[(currentPlayer+1)%4],&readCard,sizeof(Card));
-
-      // close(playerReadpipes[i]); //close the read pipe
-      // close(playerWritepipes[(i+1)%4]); //close the write pipe
-      // // playRound(playerReadpipes, playerWritepipes,CS,"PlayerID"); //有大问题
+    }else if(processID[i]==0){  //Child process
           // playRound(playerReadpipes,playerWritepipes);
-
-
-      // printf("Player plays: %c%c ",readCard.suit,readCard.val);
-    
       exit(0); //termination of a child process
-    }else{
-      if(roundCounter==1){
-        
+    }else{ //Parent Process
+      if(roundCounter==1){//Check whether it is the first round
       Card HandStack[13]; //Construct the hand stack for the player
-      // Card* SortedCard;
       Distribute(Stack,HandStack,i); //Extract the specific card from the Stack to player's hand
       ShowCard(HandStack,i); //Initially print the player's hand
-      // SortCard(HandStack,i,playerReadpipes,playerWritepipes); //Group and Calculate the player's hand, then sort
       SortCard(HandStack,i);
       playerReady[i]=1; //Player Ready
       playRound(playerReadpipes,playerWritepipes);
+      }else{ 
+        /*failed to read from parent and write back*/ 
+        /*Idea: Create another card object that receive the card send from the child process
+                Then send to another child process*/
+        
+        //Card readCard;
+        // read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
+        // write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
+
+        //The recursive rounds going on, until the round reached 13
+        if (roundCounter == 13) {
+        printf("Final Scores:\n");
+        for (i = 0; i < 4; i++) {
+          printf("Child %d, pid %d: %d\n", i + 1, playerIDSet[i], playerScores[i]);
+            }
+         }
       }
-      
-      // Card readCard;
-      // read(playerReadpipes[(currentPlayer+1)%4],&readCard,sizeof(Card));
-      
     }
   }
-
-  
-  int k;
-  // while(roundCounter<13){
-  //   playRound(playerReadpipes,playerWritepipes);
-  // }
-  
-
-
   //receive exit status from the 4 players (parent)
   for(i=0;i<4;i++){
-  // for(i=0;i<13;i++){
-      
       wait(NULL);
   }
 }
