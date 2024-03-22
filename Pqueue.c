@@ -6,7 +6,6 @@
 #include <string.h> 
 
 
-
 //Custom a Card Object using typedef, containing the suit and the value attributes of the card
 typedef struct
 {
@@ -31,6 +30,7 @@ CardSet CS[4];
 Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
 int roundCardCount = 0; //总出卡counter
 int currentPlayer;
+int playerReady[4]={0};
 
 
 //Give up on achieveing level 2 and so forth...
@@ -68,19 +68,49 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
   // Card readCard;
   int sameSuitIndex = -1;
   int randomSuitIndex= -1;
-  if(roundCounter==1){
+  if(roundCounter==1){ //是第一轮，指定Player 1 作为先手出牌 (手动过一遍流程?)
     playedCard.suit = CS[currentPlayer].CardStack[0].suit;//打出当前玩家的第一张牌
     playedCard.val=CS[currentPlayer].CardStack[0].val;
-    printf("Child %d, pid %d: play %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
+    printf("Child %d, pid %d: play %c%c\n", playerIDSet[currentPlayer%4],processID[currentPlayer], playedCard.suit, playedCard.val);
     CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
     CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
     write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
-    roundCounter++;
+    RoundCards[0].suit=playedCard.suit;
+    RoundCards[0].val=playedCard.val;
+    roundCardCount++;
+    for(i=1;i<=3;i++){
+      int k;
+      for(k=0;k<13;k++){
+        if (RoundCards[0].suit == CS[k].CardStack->suit) {
+        sameSuitIndex = i;
+        break;
+        } 
+      }   
+    if (sameSuitIndex != -1) {
+      //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
+      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
+      playedCard = CS[i].CardStack[sameSuitIndex];
+      CS[i].CardStack[sameSuitIndex].suit = 0;
+      CS[i].CardStack[sameSuitIndex].val = 0;
+    } else {
+      //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
+      //这块的逻辑也要重写[Done?]
+      playedCard = CS[i].CardStack[randomSuitIndex];
+      CS[i].CardStack[randomSuitIndex].suit = 0;
+      CS[i].CardStack[randomSuitIndex].val = 0;
+    }
+    RoundCards[roundCardCount].suit=playedCard.suit;
+    RoundCards[roundCardCount].val=playedCard.val;
+    printf("Child %d, pid %d: played %c%c\n", playerIDSet[i],processID[currentPlayer], playedCard.suit, playedCard.val);
+    currentPlayer++;
+    roundCardCount++;
    
-    return;
+  }
+  roundCounter++;
   }else{
+    //不是第一轮，
     //打印出当前玩家的出牌信息(getpid()要改，要提前存好每个child的pid，存到数组进行调用)
-    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
+    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1,processID[currentPlayer], playedCard.suit, playedCard.val);
 
     // 将玩家打出的卡传回到 父进程中 [传入playedCard的地址]
     write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
@@ -113,19 +143,19 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
         }
       }
     }
-    if (sameSuitIndex != -1) {
-      //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
-      //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
-      playedCard = CS[currentPlayer].CardStack[sameSuitIndex];
-      CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
-      CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
-    } else {
-      //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
-      //这块的逻辑也要重写[Done?]
-      playedCard = CS[currentPlayer].CardStack[randomSuitIndex];
-      CS[currentPlayer].CardStack[randomSuitIndex].suit = 0;
-      CS[currentPlayer].CardStack[randomSuitIndex].val = 0;
-    }
+    // if (sameSuitIndex != -1) {
+    //   //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
+    //   //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
+    //   playedCard = CS[currentPlayer].CardStack[sameSuitIndex];
+    //   CS[currentPlayer].CardStack[sameSuitIndex].suit = 0;
+    //   CS[currentPlayer].CardStack[sameSuitIndex].val = 0;
+    // } else {
+    //   //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
+    //   //这块的逻辑也要重写[Done?]
+    //   playedCard = CS[currentPlayer].CardStack[randomSuitIndex];
+    //   CS[currentPlayer].CardStack[randomSuitIndex].suit = 0;
+    //   CS[currentPlayer].CardStack[randomSuitIndex].val = 0;
+    // }
 
     printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
 
@@ -184,7 +214,7 @@ void Distribute(Card* Stack, Card* HandStack,int playerIndex){
 
 //A funtion that print the cards on the player's hand.
 void ShowCard(Card* HandStack,int playerIndex){
-  printf("Child %d, pid %d: received ",playerIndex+1,getpid());
+  printf("Child %d, pid %d: received ",playerIndex+1,processID[playerIndex]);
   int i;
   for(i=0;i<13;i++){ //assume that each player got 13 cards (52 cards in stack)
     printf("%c%c ",HandStack[i].suit,HandStack[i].val);
@@ -249,7 +279,7 @@ void DescendSort(Card* SelectStack,int size){
 //A function that sort the cards in player's hand and calculate the value for the hand
 void SortCard(Card* HandStack,int playerIndex){
   int i;
-  printf("Child %d, pid %d: arranged ",playerIndex+1,getpid()); //getpid()才是取得进程号
+  printf("Child %d, pid %d: arranged ",playerIndex+1,processID[playerIndex]); 
 
   //Create 4 arrays to store different suit of cards
   Card Sstack[13];
@@ -306,8 +336,8 @@ void SortCard(Card* HandStack,int playerIndex){
 
 int main(int argc, char *argv[]){
 
-  printf("This program has failed to achieve level 2 and so forth, please check the source code for referencing...\n");
-  printf("I've tried my best effort, I'm sorry T-T\n");
+  // printf("This program has failed to achieve level 2 and so forth, please check the source code for referencing...\n");
+  // printf("I've tried my best effort, I'm sorry T-T\n");
 
   int i;
   //Known that a stack of 52 cards will be input in the command line
@@ -346,6 +376,26 @@ int main(int argc, char *argv[]){
       printf("Failed to create the player, the program will terminate now.");
       return 0;
     }else if(processID[i]==0){  //What would be done to each player
+      for(i=0;i<4;i++){
+        if(playerReady[i]==0){
+          //因为所有玩家未准备就绪，所以如果有玩家此时想出牌将会被拒绝(exit(1))
+          printf("Player %d cannot discard now, since other players are not ready\n",playerIDSet[i]);
+          break;
+        }
+      }
+      // Card readCard;
+      // read(playerReadpipes[(currentPlayer+1)%4],&readCard,sizeof(Card));
+
+      // close(playerReadpipes[i]); //close the read pipe
+      // close(playerWritepipes[(i+1)%4]); //close the write pipe
+      // // playRound(playerReadpipes, playerWritepipes,CS,"PlayerID"); //有大问题
+      // playRound(playerReadpipes,playerWritepipes);
+      // printf("Player plays: %c%c ",readCard.suit,readCard.val);
+     
+
+      exit(0); //termination of a child process
+    }else{
+      if(roundCounter==1){
       Card HandStack[13]; //Construct the hand stack for the player
       // Card* SortedCard;
       // memcpy(CS[i].stackPtr, SortedCard, 13 * sizeof(Card));
@@ -353,19 +403,18 @@ int main(int argc, char *argv[]){
       ShowCard(HandStack,i); //Initially print the player's hand
       // SortCard(HandStack,i,playerReadpipes,playerWritepipes); //Group and Calculate the player's hand, then sort
       SortCard(HandStack,i);
-      close(playerReadpipes[i]); //close the read pipe
-      close(playerWritepipes[(i+1)%4]); //close the write pipe
       playerIDSet[i]=i+1;
-      playRound(playerReadpipes,playerWritepipes);
-
-      exit(0); //termination of a child process
-    }else{
-      // playRound(playerReadpipes, playerWritepipes,CS,"PlayerID"); //有大问题
+      playerReady[i]=1; //Player Ready
+      // playRound(playerReadpipes,playerWritepipes);
+      }
+      
       // Card readCard;
       // read(playerReadpipes[(currentPlayer+1)%4],&readCard,sizeof(Card));
-      // printf("Player plays: %c%c ",readCard.suit,readCard.val);
+      
     }
   }
+  // printf("Player[]: [%d,%d %d,%d]\n",playerIDSet[0],playerIDSet[1],playerIDSet[2],playerIDSet[3]);
+  // printf("ProcessID[]: [%d,%d %d,%d]\n",processID[0],processID[1],processID[2],processID[3]);
   
   int k;
   // while(roundCounter<13){
@@ -377,9 +426,7 @@ int main(int argc, char *argv[]){
   //receive exit status from the 4 players (parent)
   for(i=0;i<4;i++){
   // for(i=0;i<13;i++){
-  // 
+      
       wait(NULL);
   }
 }
-
-AAAAATest
