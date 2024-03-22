@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <string.h> 
 
+
+
 //Custom a Card Object using typedef, containing the suit and the value attributes of the card
 typedef struct
 {
@@ -29,6 +31,10 @@ CardSet CS[4];
 Card RoundCards[52]; //定义一种(总体的)卡组，记录每回合（4轮)出牌的情况，共13个回合(52轮)
 int roundCardCount = 0; //总出卡counter
 int currentPlayer;
+
+
+//Give up on achieveing level 2 and so forth...
+
 
 //playRound函数理论上是应该是在"父进程"里面执行的，(边创建玩家[完整]，完整创建的玩家 边出牌)
 void playRound(int playerReadpipes[], int playerWritepipes[]){
@@ -73,7 +79,7 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
    
     return;
   }else{
-    //打印出当前玩家的出牌信息(getpid()要改，要提前存好每个child的pid)
+    //打印出当前玩家的出牌信息(getpid()要改，要提前存好每个child的pid，存到数组进行调用)
     printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, getpid(), playedCard.suit, playedCard.val);
 
     // 将玩家打出的卡传回到 父进程中 [传入playedCard的地址]
@@ -86,8 +92,9 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
 
   // 查找当前玩家是否有"能出"的牌(花色一样的牌)，并进行定位
     Card* readCard;
-
     //write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card));
+
+    //Not work as intended, idk what am i doing right here...
     read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
     write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
     for (i = 0; i < roundCardCount; i++) {
@@ -298,6 +305,9 @@ void SortCard(Card* HandStack,int playerIndex){
 }
 
 int main(int argc, char *argv[]){
+
+  printf("This program has failed to achieve level 2 and so forth, please check the source code for referencing...\n");
+  printf("I've tried my best effort, I'm sorry T-T\n");
 
   int i;
   //Known that a stack of 52 cards will be input in the command line
