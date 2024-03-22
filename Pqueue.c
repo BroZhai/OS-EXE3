@@ -104,13 +104,15 @@ void playRound(int playerReadpipes[], int playerWritepipes[]){
     if (sameSuitIndex != -1) {
       //如果 有能出 同花色 的牌，"打出"玩家SortedHand[]中的牌(置suit和value为0)
       //这块逻辑不对，需要重写(想办法用到sameSuitIndex这个参数在SortedHand[]中定位)[Done?]
-      playedCard = CS[i].CardStack[sameSuitIndex];
+      playedCard.suit = CS[i].CardStack[sameSuitIndex].suit;
+      playedCard.val=CS[i].CardStack[sameSuitIndex].val;
       CS[i].CardStack[sameSuitIndex].suit = 0;
       CS[i].CardStack[sameSuitIndex].val = 0;
     } else {
       //如果 没得同花色 的牌，直接找到SortedHand中最小的出就好了
       //这块的逻辑也要重写[Done?]
-      playedCard = CS[i].CardStack[randomSuitIndex];
+      playedCard.suit = CS[i].CardStack[randomSuitIndex].suit;
+      playedCard.val= CS[i].CardStack[randomSuitIndex].suit;
       CS[i].CardStack[randomSuitIndex].suit = 0;
       CS[i].CardStack[randomSuitIndex].val = 0;
     }
@@ -350,8 +352,8 @@ void SortCard(Card* HandStack,int playerIndex){
 
 int main(int argc, char *argv[]){
 
-  printf("This program has failed to achieve level 2 and so forth, please check the source code for referencing...\n");
-  printf("I've tried my best effort, I'm sorry T-T\n");
+  printf("This program has failed to achieve level 2 and so forth, please check the source code for further referencing...\n");
+  printf("I've tried my best, I'm sorry T-T\n");
 
   int i;
   //Known that a stack of 52 cards will be input in the command line
