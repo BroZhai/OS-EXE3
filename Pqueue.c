@@ -1,5 +1,5 @@
-/*Give up on achieveing level 2 and so forth...
-  I've really tried...*/
+/*I've written my idea as anotation for most of the functions, but I don't know why there are strange bugs appeared...
+  which I can not handled eventually... I have made my best pursuiting it T-T*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -23,168 +23,15 @@ int sCounter;
 int roundCounter=1;
 int processID[4];
 int playerIDSet[4]={1,2,3,4};
-int playerReadpipes[4];
-int playerWritepipes[4];
+int playerReadpipes[4]; //Readpipes[Set] for players
+int playerWritepipes[4]; //Writepipes[Set] for players
 int playerScores[4] = {0}; // use a int[] to store every player's score
-CardSet CS[4]; // Create A set a four player's hand
+CardSet CS[4]; // Create A set containing four player's hand
 Card RoundCards[52];   // Array to record the cards played in each round
 int roundCardCount = 0; 
 int currentPlayer;
 int playerReady[4]={0};//Status for each player
 int gamePid;
-
-//Define a function that play the round process
-void playRound(int playerReadpipes[], int playerWritepipes[]){
-    int i; 
-      for(i=0;i<4;i++){
-        if(playerReady[i]==0){
-          //When players are not all ready, the game will not start 
-          printf("Player %d cannot discard now, since other players are not ready\n",playerIDSet[i]);
-          return;
-        }
-      }
-
-
-  // Determine the starting player for each round
-  int roundWinner;
-  int startingPlayer; 
-  if(roundCounter==1){ //rounderCounter starts from "1"
-      roundWinner=0;
-    }
-  startingPlayer=roundWinner;
-  currentPlayer=startingPlayer;
-
-  // create a Card object that receives player's discards
-  Card playedCard;
-  if(roundCounter==1){ //If it is the first round, assign player 1 to be the starter
-    gamePid=getpid();
-    printf("All players are ready, the game is about to start now!\n");
-    printf("Parent pid %d: child players are %d, %d, %d, %d\n",gamePid,processID[0],processID[1],processID[2],processID[3]);
-    playedCard.suit = CS[currentPlayer].CardStack[0].suit;
-    playedCard.val=CS[currentPlayer].CardStack[0].val;
-    printf("Parent pid %d: Round %d ,Child 1 to the lead\n",gamePid,roundCounter);
-    printf("Child %d, pid %d: play %c%c\n", playerIDSet[currentPlayer%4],processID[currentPlayer+1], playedCard.suit, playedCard.val);
-    CS[currentPlayer].CardStack[0].suit = 0;
-    CS[currentPlayer].CardStack[0].val = 0;
-    // write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card)); //failed to write back
-    RoundCards[0].suit=playedCard.suit;
-    RoundCards[0].val=playedCard.val;
-    roundCardCount++;
-    currentPlayer++;
-    //swtich to the next player, locate which card to discard
-    int sameSuitIndex = -1;
-    int randomSuitIndex= -1;
-    for(i=1;i<=3;i++){
-      int k;
-      for(k=0;k<13;k++){
-        // find the card with same suit
-        if (RoundCards[0].suit == CS[currentPlayer].CardStack[k].suit) {
-        sameSuitIndex = i;
-        break;
-        } 
-      }   
-      if (sameSuitIndex != -1) {
-        //If the card of same suit is found, discard it.
-        playedCard.suit = CS[i].CardStack[sameSuitIndex].suit;
-        playedCard.val=CS[i].CardStack[sameSuitIndex].val;
-        CS[i].CardStack[sameSuitIndex].suit = 0;
-        CS[i].CardStack[sameSuitIndex].val = 0;
-      } else {
-        //If there are no card with same suit, locate the card with minimum value
-       for (k = 0; i < 13; i++) {
-          int sValue=CS[0].CardStack->val;
-          if (CS[currentPlayer].CardStack->val<sValue) {
-          randomSuitIndex = k;
-        }
-      }
-      //discard the card with the minimum value.
-      playedCard.suit=CS[i].CardStack[randomSuitIndex].suit;
-      playedCard.val=CS[i].CardStack[randomSuitIndex].suit;
-      CS[i].CardStack[randomSuitIndex].suit = 0;
-      CS[i].CardStack[randomSuitIndex].val = 0;
-    }
-    //Store the dicarded card into the RoundCards array [related to score calculation]
-    RoundCards[roundCardCount].suit=playedCard.suit;
-    RoundCards[roundCardCount].val=playedCard.val;
-    printf("Child %d, pid %d: played %c%c\n", playerIDSet[i],processID[currentPlayer], playedCard.suit, playedCard.val);
-    currentPlayer++;
-    roundCardCount++;
-  }
-  //calculate the round score added to the round winner
-  int roundScore = 0;
-  for (i = roundCardCount-4; i < roundCardCount; i++) {
-    if (RoundCards[i].suit == 'H') {
-      roundScore += 1;
-    } else if (RoundCards[i].suit == 'S' &&RoundCards[i].val=='Q') {
-      roundScore += 13;
-    }
-    if (RoundCards[i].suit == 'H'||(RoundCards[i].suit =='S'&& RoundCards[i].val =='Q')) {
-      roundWinner = (startingPlayer + i) % 4;
-    }
-  }
-  playerScores[roundWinner] += roundScore; //add the score to round winner
-
-  //print the round winner message
-  printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
-  printf("Round Score: %d\n", roundScore);
-  roundCounter++;
-  }else{
-    //not the first round(roundCounter!=1), print the round information
-    printf("Parent pid %d: Round %d ,Child %d to the lead\n",gamePid,roundCounter,roundWinner);
-    Card* readCard;
-    int sameSuitIndex = -1;
-    int randomSuitIndex= -1;
-
-    /*failed to read from parent and write back*/ 
-    // read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
-    // write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
-
-    // Same, locate the card with same suit or minimum value card
-    for (i = 0; i < roundCardCount; i++) {
-      if (RoundCards[i].suit == CS[currentPlayer].CardStack->suit) {
-        sameSuitIndex = i;
-        break;
-      }
-    }
-
-    if(sameSuitIndex==-1){
-    for (i = 0; i < roundCardCount; i++) {
-    int sValue=CS[0].CardStack->val;
-    if (CS[currentPlayer].CardStack->val<sValue) {
-        randomSuitIndex = i;
-        }
-      }
-    }
-    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, processID[currentPlayer], playedCard.suit, playedCard.val);
-
-    //Store the dicarded card into the RoundCards array [related to score calculation]
-    RoundCards[roundCardCount].suit=playedCard.suit;
-    RoundCards[roundCardCount].val=playedCard.val;
-    roundCardCount++;
-    
-
-    //Same round score calculation strategy
-    int roundScore = 0;
-    for (i = roundCardCount-4; i < roundCardCount; i++) {
-      if (RoundCards[i].suit == 'H') {
-        roundScore += 1;
-      } else if (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q') {
-        roundScore += 13;
-      }
-      if (RoundCards[i].suit == 'H' || (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q')) {
-        roundWinner = (startingPlayer + i) % 4;
-      }
-    }
-    playerScores[roundWinner] += roundScore; 
-
-    //print the round winner message
-    printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
-    printf("Round Score: %d\n", roundScore);
-
-  roundCounter++;
-  }
-}
-
 
 //Developed a function that deal the Cards from the Card Stack
 void Distribute(Card* Stack, Card* HandStack,int playerIndex){
@@ -310,10 +157,161 @@ void SortCard(Card* HandStack,int playerIndex){
   
 }
 
+//Define a function that execute the round process
+void playRound(int playerReadpipes[], int playerWritepipes[]){
+  int i; 
+    for(i=0;i<4;i++){
+      if(playerReady[i]==0){
+        //When players are not all ready, the game will not start 
+        printf("Player %d cannot discard now, since other players are not ready\n",playerIDSet[i]);
+        return;
+      }
+    }
+
+  // Determine the starting player for each round
+  int roundWinner;
+  int startingPlayer; 
+  if(roundCounter==1){ //rounderCounter starts from "1"
+      roundWinner=0;
+    }
+  startingPlayer=roundWinner;
+  currentPlayer=startingPlayer;
+
+  // create a Card object that receives player's discards
+  Card playedCard;
+  if(roundCounter==1){ //If it is the first round, assign player 1 to be the starter
+    gamePid=getpid();
+    printf("All players are ready, the game is about to start now!\n");
+    printf("Parent pid %d: child players are %d, %d, %d, %d\n",gamePid,processID[0],processID[1],processID[2],processID[3]);
+    playedCard.suit = CS[currentPlayer].CardStack[0].suit;
+    playedCard.val=CS[currentPlayer].CardStack[0].val;
+    printf("Parent pid %d: Round %d ,Child 1 to the lead\n",gamePid,roundCounter);
+    printf("Child %d, pid %d: played %c%c\n", playerIDSet[currentPlayer%4],processID[currentPlayer+1], CS[0].CardStack->suit, CS[0].CardStack->val);
+    CS[currentPlayer].CardStack[0].suit = 0;
+    CS[currentPlayer].CardStack[0].val = 0;
+    // write(playerWritepipes[(currentPlayer + 1) % 4], &playedCard, sizeof(Card)); //failed to write back
+    RoundCards[0].suit=playedCard.suit;
+    RoundCards[0].val=playedCard.val;
+    roundCardCount++;
+    currentPlayer++;
+    //swtich to the next player, locate which card to discard
+    int sameSuitIndex = -1;
+    int randomSuitIndex= -1;
+    for(i=1;i<=3;i++){
+      int k;
+      for(k=0;k<13;k++){
+        // find the card with same suit
+        if (RoundCards[0].suit == CS[currentPlayer].CardStack[k].suit) {
+        sameSuitIndex = i;
+        break;
+        } 
+      }   
+      if (sameSuitIndex != -1) {
+        //If the card of same suit is found, discard it.
+        playedCard.suit = CS[i].CardStack[sameSuitIndex].suit;
+        playedCard.val=CS[i].CardStack[sameSuitIndex].val;
+        CS[i].CardStack[sameSuitIndex].suit = 0;
+        CS[i].CardStack[sameSuitIndex].val = 0;
+      } else {
+        //If there are no card with same suit, locate the card with minimum value
+       for (k = 0; k < 13; k++) {
+          int sValue=CS[0].CardStack->val;
+          if (CS[currentPlayer].CardStack->val<sValue) {
+          randomSuitIndex = k;
+        }
+      }
+      //discard the card with the minimum value.
+      playedCard.suit=CS[i].CardStack[randomSuitIndex].suit;
+      playedCard.val=CS[i].CardStack[randomSuitIndex].suit;
+      CS[i].CardStack[randomSuitIndex].suit = 0;
+      CS[i].CardStack[randomSuitIndex].val = 0;
+    }
+    //Store the dicarded card into the RoundCards array [related to score calculation]
+    RoundCards[roundCardCount].suit=playedCard.suit;
+    RoundCards[roundCardCount].val=playedCard.val;
+    printf("Child %d, pid %d: played %c%c\n", playerIDSet[i],processID[currentPlayer], CS[i].CardStack[0].suit, CS[i].CardStack[0].val);
+    currentPlayer++;
+    roundCardCount++;
+  }
+  //calculate the round score added to the round winner
+  int roundScore = 0;
+  for (i = roundCardCount-4; i < roundCardCount; i++) {
+    if (RoundCards[i].suit == 'H') {
+      roundScore += 1;
+    } else if (RoundCards[i].suit == 'S' &&RoundCards[i].val=='Q') {
+      roundScore += 13;
+    }
+    if (RoundCards[i].suit == 'H'||(RoundCards[i].suit =='S'&& RoundCards[i].val =='Q')) {
+      roundWinner = (startingPlayer + i) % 4;
+    }
+  }
+  playerScores[roundWinner] += roundScore; //add the score to round winner
+
+  //print the round winner message
+  printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, processID[roundWinner]);
+  printf("Round Score: %d has been added to Player %d\n", roundScore,playerIDSet[roundWinner]);
+  roundCounter++;
+  }else{
+    //not the first round(roundCounter!=1), print the round information
+    printf("Parent pid %d: Round %d ,Child %d to the lead\n",gamePid,roundCounter,roundWinner);
+    Card* readCard;
+    int sameSuitIndex = -1;
+    int randomSuitIndex= -1;
+
+    /*failed to read from parent and write back*/ 
+    // read(playerReadpipes[(currentPlayer+1)%4],readCard,sizeof(Card));
+    // write(playerWritepipes[(currentPlayer + 2) % 4], readCard, sizeof(Card));
+
+    // Same, locate the card with same suit or minimum value card
+    for (i = 0; i < roundCardCount; i++) {
+      if (RoundCards[i].suit == CS[currentPlayer].CardStack->suit) {
+        sameSuitIndex = i;
+        break;
+      }
+    }
+
+    if(sameSuitIndex==-1){
+    for (i = 0; i < roundCardCount; i++) {
+    int sValue=CS[0].CardStack->val;
+    if (CS[currentPlayer].CardStack->val<sValue) {
+        randomSuitIndex = i;
+        }
+      }
+    }
+    printf("Child %d, pid %d: played %c%c\n", currentPlayer + 1, processID[currentPlayer], playedCard.suit, playedCard.val);
+
+    //Store the dicarded card into the RoundCards array [related to score calculation]
+    RoundCards[roundCardCount].suit=playedCard.suit;
+    RoundCards[roundCardCount].val=playedCard.val;
+    roundCardCount++;
+    
+
+    //Same round score calculation strategy
+    int roundScore = 0;
+    for (i = roundCardCount-4; i < roundCardCount; i++) {
+      if (RoundCards[i].suit == 'H') {
+        roundScore += 1;
+      } else if (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q') {
+        roundScore += 13;
+      }
+      if (RoundCards[i].suit == 'H' || (RoundCards[i].suit == 'S' && RoundCards[i].val == 'Q')) {
+        roundWinner = (startingPlayer + i) % 4;
+      }
+    }
+    playerScores[roundWinner] += roundScore; 
+
+    //print the round winner message
+    printf("Round Winner: Child %d, pid %d\n", roundWinner + 1, playerIDSet[roundWinner]);
+    printf("Round Score: %d\n", roundScore);
+
+  roundCounter++;
+  }
+}
+
 int main(int argc, char *argv[]){
 
-  printf("This program has failed to achieve level 2 and so forth, please check the source code for further referencing...\n");
-  printf("I've tried my best, I'm sorry T-T\n");
+  printf("This program is attempting level 2, but failed on rest of the levels. \nPlease check the source code for further referencing...\n");
+  printf("I've tried my best, sorry T-T\n");
 
   int i;
   //Known that a stack of 52 cards will be input in the command line
@@ -383,4 +381,5 @@ int main(int argc, char *argv[]){
   for(i=0;i<4;i++){
       wait(NULL);
   }
+  printf("Program terminates here...\n");
 }
